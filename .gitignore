@@ -3,6 +3,9 @@
 .AppleDouble
 .LSOverride
 
+# Mongo
+db/*
+
 # Pycharm
 .idea/*
 
