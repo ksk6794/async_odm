@@ -4,7 +4,7 @@
 .LSOverride
 
 ### Mongo ###
-/db/*
+/db/
 
 ### Pycharm ###
 .idea/*
