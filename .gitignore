@@ -4,7 +4,7 @@
 .LSOverride
 
 # Mongo
-db/*
+/db/*
 
 # Pycharm
 .idea/*
@@ -16,5 +16,3 @@ __pycache__
 # Logs
 *.log
 pip-log.txt
-
-
