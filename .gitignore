@@ -3,17 +3,17 @@
 .AppleDouble
 .LSOverride
 
-# Mongo
+### Mongo ###
 /db/*
 
-# Pycharm
+### Pycharm ###
 .idea/*
 .idea/
 
-# Basics
+### Basics ###
 *.py[cod]
 __pycache__
 
-# Logs
+### Logs ###
 *.log
 pip-log.txt
