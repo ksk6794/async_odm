@@ -1,9 +1,8 @@
 from datetime import datetime
-
 from core.dispatchers import MongoDispatcher
 from core.fields import CharField, ForeignKey
 from tests.base import BaseAsyncTestCase
-from tests.models import User, Post, Name
+from tests.models import Author, Post, Name
 
 
 class IntegrationTests(BaseAsyncTestCase):
@@ -11,9 +10,9 @@ class IntegrationTests(BaseAsyncTestCase):
         pass
 
     async def test_auto_model_name(self):
-        user = User()
+        user = Author()
 
-        self.assertEqual(user._dispatcher.collection_name, 'user')
+        self.assertEqual(user._dispatcher.collection_name, 'author')
 
     async def test_model_instance(self):
         name = Name(name='Bob')
@@ -90,7 +89,7 @@ class IntegrationTests(BaseAsyncTestCase):
         self.assertEqual(names, [])
 
     async def test_get_by_foreignkey_instance(self):
-        user = User(username='Frank')
+        user = Author(username='Frank')
         await user.save()
 
         post = Post(title='News', author=user, published=datetime.now())
@@ -104,7 +103,7 @@ class IntegrationTests(BaseAsyncTestCase):
         await post.delete()
 
     async def test_filter_by_foreignkey_instance(self):
-        user = User(username='Frank')
+        user = Author(username='Frank')
         await user.save()
 
         post = Post(title='News', author=user, published=datetime.now())
@@ -119,23 +118,23 @@ class IntegrationTests(BaseAsyncTestCase):
         await post.delete()
 
     async def test_filter_count(self):
-        user = User(username='Frank')
+        user = Author(username='Frank')
         await user.save()
 
-        users_count = await User.objects.filter(username='Frank').count()
+        users_count = await Author.objects.filter(username='Frank').count()
 
         self.assertEqual(users_count, 1)
 
         await user.delete()
 
     async def test_all_count(self):
-        user_1 = User(username='Frank')
+        user_1 = Author(username='Frank')
         await user_1.save()
 
-        user_2 = User(username='Bill')
+        user_2 = Author(username='Bill')
         await user_2.save()
 
-        users_count = await User.objects.all().count()
+        users_count = await Author.objects.all().count()
 
         self.assertEqual(users_count, 2)
 
@@ -143,17 +142,17 @@ class IntegrationTests(BaseAsyncTestCase):
         await user_2.delete()
 
     async def test_count(self):
-        user = User(username='Frank')
+        user = Author(username='Frank')
         await user.save()
 
-        users_count = await User.objects.count()
+        users_count = await Author.objects.count()
 
         self.assertEqual(users_count, 1)
 
         await user.delete()
 
     async def test_foreignkey(self):
-        user = User(username='Frank')
+        user = Author(username='Frank')
         await user.save()
 
         post = Post(title='News', author=user)
@@ -178,7 +177,7 @@ class IntegrationTests(BaseAsyncTestCase):
         await post.delete()
 
     async def test_foreignkey_backward(self):
-        user = User(username='Frank')
+        user = Author(username='Frank')
         await user.save()
 
         post_1 = Post(title='News', author=user)

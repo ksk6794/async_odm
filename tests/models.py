@@ -1,5 +1,4 @@
 from uuid import uuid4
-
 from core.base import MongoModel
 from core.fields import CharField, IntegerField, FloatField, ListField, DictField, DateTimeField, ForeignKey
 
@@ -9,11 +8,11 @@ class Post(MongoModel):
         collection_name = 'post'
 
     title = CharField()
-    author = ForeignKey('User', related_name='posts', null=False)
+    author = ForeignKey('Author', related_name='posts', null=False)
     published = DateTimeField(null=True)
 
 
-class User(MongoModel):
+class Author(MongoModel):
     username = CharField(length=10, null=True)
     age = IntegerField(null=True)
     billing = FloatField(null=True)
