@@ -1,14 +1,21 @@
 from core.base import MongoModel
 from core.fields import CharField, OneToOne
 from tests.base import BaseAsyncTestCase
+from tests.integration.test_connection import TestConnection
 
 
 class UserTest(MongoModel):
+    class Meta:
+        connection = TestConnection
+
     username = CharField()
     profile = OneToOne('ProfileTest', related_name='user')
 
 
 class ProfileTest(MongoModel):
+    class Meta:
+        connection = TestConnection
+
     position = CharField()
 
 

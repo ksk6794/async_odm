@@ -2,10 +2,10 @@ import re
 import asyncio
 from bson import DBRef
 from collections import namedtuple
-from core.utils import classproperty
-from core.manager import DocumentsManager
-from core.dispatchers import MongoDispatcher
-from core.fields import Field, BaseRelationField, BaseBackwardRelationField
+from .utils import classproperty
+from .manager import DocumentsManager
+from .dispatchers import MongoDispatcher
+from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
 
@@ -20,6 +20,7 @@ class BaseModel(type):
     def __new__(mcs, name, bases, attrs):
         if name != 'MongoModel':
             attrs['collection_name'] = mcs._get_collection_name(name, attrs)
+            attrs['_connection'] = mcs._get_connection(attrs)
             attrs['_dispatcher'] = mcs._get_dispatcher(attrs)
             attrs['_declared_fields'] = mcs._get_declared_fields(attrs)
 
@@ -27,6 +28,11 @@ class BaseModel(type):
         RelationManager().add_model(name, model)
 
         return model
+
+    @classmethod
+    def _get_connection(mcs, attrs):
+        meta = attrs.get('Meta')
+        return getattr(meta, 'connection', None)
 
     @classmethod
     def _get_collection_name(mcs, name, attrs):
@@ -46,8 +52,9 @@ class BaseModel(type):
         :param attrs: list - class attributes
         :return: MongoDispatcher instance
         """
+        connection = attrs.get('_connection')
         collection_name = attrs.get('collection_name')
-        return MongoDispatcher(collection_name)
+        return MongoDispatcher(connection, collection_name)
 
     @classmethod
     def _get_declared_fields(mcs, attrs):

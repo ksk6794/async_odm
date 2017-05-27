@@ -1,10 +1,12 @@
 from uuid import uuid4
 from core.base import MongoModel
+from tests.integration.test_connection import TestConnection
 from core.fields import CharField, IntegerField, FloatField, ListField, DictField, DateTimeField, ForeignKey
 
 
 class Post(MongoModel):
     class Meta:
+        connection = TestConnection
         collection_name = 'post'
 
     title = CharField()
@@ -13,6 +15,9 @@ class Post(MongoModel):
 
 
 class Author(MongoModel):
+    class Meta:
+        connection = TestConnection
+
     username = CharField(length=10, null=True)
     age = IntegerField(null=True)
     billing = FloatField(null=True)
@@ -22,6 +27,7 @@ class Author(MongoModel):
 
 class Name(MongoModel):
     class Meta:
+        connection = TestConnection
         collection_name = 'name_collection'
 
     name = CharField(unique=True, default=uuid4)

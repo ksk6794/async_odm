@@ -2,9 +2,13 @@ from datetime import datetime
 from core.base import MongoModel
 from tests.base import BaseAsyncTestCase
 from core.fields import CharField, IntegerField, ListField, DictField, FloatField, DateTimeField, BoolField
+from tests.integration.test_connection import TestConnection
 
 
 class User(MongoModel):
+    class Meta:
+        connection = TestConnection
+
     username = CharField()
     age = IntegerField()
     billing = FloatField()

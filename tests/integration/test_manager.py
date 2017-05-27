@@ -1,9 +1,13 @@
 from core.base import MongoModel
 from core.fields import CharField
 from tests.base import BaseAsyncTestCase
+from tests.integration.test_connection import TestConnection
 
 
 class Folder(MongoModel):
+    class Meta:
+        connection = TestConnection
+
     name = CharField()
 
 

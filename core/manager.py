@@ -1,8 +1,7 @@
 import asyncio
 import functools
-
-from core.node import Q, QNode
-from core.utils import update
+from .node import Q, QNode
+from .utils import update
 
 
 class DocumentsManager:

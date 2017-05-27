@@ -1,8 +1,6 @@
-from core.connection import MongoDBConnection
-
-
 class MongoDispatcher:
-    def __init__(self, collection_name):
+    def __init__(self, connection, collection_name):
+        self.connection = connection
         self.collection_name = collection_name
 
     async def count(self, **kwargs):
@@ -13,8 +11,8 @@ class MongoDispatcher:
 
     async def _get_collection(self):
         # TODO: Disallow conflicting collection names ('name', ...)
-        mongodb_connection = await MongoDBConnection.get_instance()
-        collection = getattr(mongodb_connection.database, self.collection_name)
+        database = await self.connection().get_database()
+        collection = getattr(database, self.collection_name)
 
         return collection
 
@@ -56,6 +54,7 @@ class MongoDispatcher:
         cursor = collection.find(kwargs)
         documents = []
 
+        # TODO: Return by parts
         while await cursor.fetch_next:
             documents.append(cursor.next_object())
 
