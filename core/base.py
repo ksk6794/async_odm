@@ -269,7 +269,9 @@ class MongoModel(metaclass=BaseModel):
         # TODO: Can't get collection_name of None if relation class is a string.
         collection_name = field_instance.relation.get_collection_name()
         document_id = getattr(field_value, '_id', field_value)
-        field_value = DBRef(collection_name, document_id)
+        # TODO: To think of how to save a database name and access to it on call relation
+        database = None
+        field_value = DBRef(collection_name, document_id, database)
 
         return field_value
 

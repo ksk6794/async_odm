@@ -2,7 +2,6 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 
 class MongoConnection:
-    _instance = None
     _database = None
 
     host = None
