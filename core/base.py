@@ -19,7 +19,7 @@ class BaseModel(type):
 
     def __new__(mcs, name, bases, attrs):
         if name != 'MongoModel':
-            attrs['collection_name'] = mcs._get_collection_name(name, attrs)
+            attrs['_collection_name'] = mcs._get_collection_name(name, attrs)
             attrs['_connection'] = mcs._get_connection(attrs)
             attrs['_dispatcher'] = mcs._get_dispatcher(attrs)
             attrs['_declared_fields'] = mcs._get_declared_fields(attrs)
@@ -53,7 +53,7 @@ class BaseModel(type):
         :return: MongoDispatcher instance
         """
         connection = attrs.get('_connection')
-        collection_name = attrs.get('collection_name')
+        collection_name = attrs.get('_collection_name')
         return MongoDispatcher(connection, collection_name)
 
     @classmethod
@@ -187,6 +187,7 @@ class RelationManager:
 class MongoModel(metaclass=BaseModel):
     _id = None
     _dispatcher = None
+    _collection_name = None
     _declared_fields = None
     _modified_fields = []
 
@@ -232,6 +233,10 @@ class MongoModel(metaclass=BaseModel):
     def get_dispatcher(cls):
         return cls._dispatcher
 
+    @classmethod
+    def get_collection_name(cls):
+        return cls._collection_name
+
     async def save(self):
         for field_name, field_instance in self.get_declared_fields().items():
 
@@ -262,7 +267,7 @@ class MongoModel(metaclass=BaseModel):
 
         # Set the DBRef for the field value (create) or leave the same (update)
         # TODO: Can't get collection_name of None if relation class is a string.
-        collection_name = field_instance.relation.collection_name
+        collection_name = field_instance.relation.get_collection_name()
         document_id = getattr(field_value, '_id', field_value)
         field_value = DBRef(collection_name, document_id)
 
