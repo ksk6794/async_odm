@@ -16,8 +16,8 @@ class DocumentsManager:
         self._sort = []
         self._delete = False
         self._count = False
-        self._limit = False
-        self._skip = False
+        self._limit = None
+        self._skip = None
         self.__dict__.update(**kwargs)
 
     def all(self):
@@ -36,12 +36,11 @@ class DocumentsManager:
         self._find = update(self._find, self._to_query(invert=True, **kwargs))
         return self
 
-    # TODO: Test it!
     def sort(self, *args):
-        for field_name in args:
-            if isinstance(field_name, str):
-                field_name = field_name[1:] if field_name.startswith('-') else field_name
-                ordering = DESCENDING if field_name.startswith('-') else ASCENDING
+        for arg in args:
+            if isinstance(arg, str):
+                field_name = arg[1:] if arg.startswith('-') else arg
+                ordering = DESCENDING if arg.startswith('-') else ASCENDING
                 self._sort.append((field_name, ordering))
 
         return self
@@ -108,10 +107,19 @@ class DocumentsManager:
                 query = self.model.get_dispatcher().delete_many(**self._find)
 
         elif self._find:
-            query = self.model.get_dispatcher().find(sort=self._sort, **self._find)
+            query = self.model.get_dispatcher().find(
+                sort=self._sort,
+                limit=self._limit,
+                skip=self._skip,
+                filter=self._find
+            )
 
         elif self._all:
-            query = self.model.get_dispatcher().find(sort=self._sort)
+            query = self.model.get_dispatcher().find(
+                sort=self._sort,
+                limit=self._limit,
+                skip=self._skip
+            )
 
         else:
             raise Exception('Wrong queryset')

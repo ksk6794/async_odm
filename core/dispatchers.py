@@ -52,9 +52,24 @@ class MongoDispatcher:
         elif count > 1:
             raise MultipleObjectsReturned('Got more than 1 document - it returned {count}'.format(count=count))
 
-    async def find(self, sort, **kwargs):
+    async def find(self, **kwargs):
         collection = await self._get_collection()
-        cursor = collection.find(kwargs, sort=sort)
+
+        # TODO: Move check and processing to DocumentsManager
+        available_params = {
+            'filter': dict,
+            'sort': list,
+            'limit': int,
+            'skip': int
+        }
+        params = {}
+        for param_name, param_type in available_params.items():
+            param_value = kwargs.get(param_name)
+
+            if isinstance(param_value, param_type):
+                params[param_name] = param_value
+
+        cursor = collection.find(**params)
         documents = []
 
         # TODO: To give in parts
