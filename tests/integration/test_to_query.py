@@ -26,7 +26,7 @@ class ToQueryConditionsTests(BaseAsyncTestCase):
         self.assertEqual(users_count, 2)
 
     async def test_to_query_invert_q_and(self):
-        users = await Profile.objects.q_query(~Q(age=20) & ~Q(username='Ivan'))[5]
+        users = await Profile.objects.q_query(~Q(age=20) & ~Q(username='Ivan'))
 
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0].age, 18)
