@@ -275,7 +275,7 @@ class MongoModel(metaclass=BaseModel):
         self.__dict__.update(document)
 
     async def delete(self):
-        await self._dispatcher.delete(self._id)
+        await self._dispatcher.delete_one(self._id)
 
     def get_object_id(self):
         return self._id

@@ -63,7 +63,7 @@ class MongoDispatcher:
 
         return documents
 
-    async def delete(self, _id):
+    async def delete_one(self, _id):
         collection = await self._get_collection()
         result = await collection.delete_one(filter={'_id': _id})
 

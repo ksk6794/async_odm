@@ -36,6 +36,7 @@ class DocumentsManager:
         self._find = update(self._find, self._to_query(invert=True, **kwargs))
         return self
 
+    # TODO: Test it!
     def sort(self, *args):
         for field_name in args:
             if isinstance(field_name, str):
@@ -53,12 +54,14 @@ class DocumentsManager:
 
         return self
 
+    # TODO: Test it!
     def raw_query(self, raw_query):
         if isinstance(raw_query, dict):
             update(self._find, raw_query)
 
         return self
 
+    # TODO: Test it!
     def delete(self):
         self._delete = True
         return self
@@ -99,7 +102,10 @@ class DocumentsManager:
             query = self.model.get_dispatcher().get(**self._get)
 
         elif self._delete:
-            query = self.model.get_dispatcher().delete_many(**self._find)
+            if self._get:
+                query = self.model.get_dispatcher().delete_one(**self._get)
+            else:
+                query = self.model.get_dispatcher().delete_many(**self._find)
 
         elif self._find:
             query = self.model.get_dispatcher().find(sort=self._sort, **self._find)
@@ -115,6 +121,7 @@ class DocumentsManager:
     def _to_object(self, document):
         return self.model(**document)
 
+    # TODO: Test it!
     def __getitem__(self, item):
         if not isinstance(item, slice):
             raise TypeError('\'{class_name}\' object does not support indexing'.format(
