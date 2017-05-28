@@ -13,9 +13,7 @@ class ToQueryConditionsTests(BaseAsyncTestCase):
         await self.user_3.save()
 
     async def tearDown(self):
-        await self.user_1.delete()
-        await self.user_2.delete()
-        await self.user_3.delete()
+        await Profile.objects.all().delete()
 
     async def test_to_query_q_or(self):
         users = await Profile.objects.q_query(Q(age=20) | Q(username='Ivan'))

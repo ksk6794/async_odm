@@ -12,9 +12,7 @@ class ExcludeConditionsTests(BaseAsyncTestCase):
         await self.user_3.save()
 
     async def tearDown(self):
-        await self.user_1.delete()
-        await self.user_2.delete()
-        await self.user_3.delete()
+        await Profile.objects.all().delete()
 
     async def test_exclude_gt(self):
         users = await Profile.objects.exclude(age__gt=25)
