@@ -126,7 +126,9 @@ class RelationManager:
         :param model: MongoModel instance
         :return: void
         """
-        if name is not 'MongoModel':
+        name = '.'.join((model.__module__, model.__name__))
+
+        if model.__name__ is not 'MongoModel':
             if name not in self._models:
                 self._models[name] = model
                 self._process_relations(model)
@@ -153,6 +155,10 @@ class RelationManager:
                     rel_model = relation
 
                 elif isinstance(relation, str):
+                    if '.' not in relation:
+                        relation = '.'.join((model.__module__, relation))
+                        field_instance.relation = relation
+
                     rel_model = self.get_model(relation)
 
                 else:
@@ -169,7 +175,7 @@ class RelationManager:
                     waited_relation = WaitedRelation(
                         field_name=field_name,
                         field_instance=field_instance,
-                        model_name=model.__name__
+                        model_name=relation
                     )
                     self._waited_relations.append(waited_relation)
 
