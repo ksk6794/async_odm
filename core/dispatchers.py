@@ -1,3 +1,6 @@
+from .exceptions import DoesNotExist, MultipleObjectsReturned
+
+
 class MongoDispatcher:
     def __init__(self, connection, collection_name):
         self.connection = connection
@@ -44,10 +47,10 @@ class MongoDispatcher:
             return document
 
         elif count < 1:
-            raise Exception('Document does not exists!')
+            raise DoesNotExist('Document does not exists!')
 
         elif count > 1:
-            raise Exception('Got more than 1 document!')
+            raise MultipleObjectsReturned('Got more than 1 document - it returned {count}'.format(count=count))
 
     async def find(self, sort, **kwargs):
         collection = await self._get_collection()
