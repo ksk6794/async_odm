@@ -6,7 +6,6 @@ from core.fields import CharField, IntegerField, FloatField, ListField, DictFiel
 
 class Post(MongoModel):
     class Meta:
-        connection = TestConnection
         collection_name = 'post'
 
     title = CharField()
@@ -15,9 +14,6 @@ class Post(MongoModel):
 
 
 class Author(MongoModel):
-    class Meta:
-        connection = TestConnection
-
     username = CharField(length=10, null=True)
     age = IntegerField(null=True)
     billing = FloatField(null=True)

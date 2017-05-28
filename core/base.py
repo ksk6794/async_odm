@@ -1,7 +1,11 @@
+import importlib
+import os
 import re
 import asyncio
 from bson import DBRef
 from collections import namedtuple
+
+from core.connection import MongoConnection
 from .utils import classproperty
 from .manager import DocumentsManager
 from .dispatchers import MongoDispatcher
@@ -20,7 +24,7 @@ class BaseModel(type):
     def __new__(mcs, name, bases, attrs):
         if name != 'MongoModel':
             attrs['_collection_name'] = mcs._get_collection_name(name, attrs)
-            attrs['_connection'] = mcs._get_connection(attrs)
+            attrs['_connection'] = mcs._get_connection(name, attrs)
             attrs['_dispatcher'] = mcs._get_dispatcher(attrs)
             attrs['_declared_fields'] = mcs._get_declared_fields(attrs)
 
@@ -30,9 +34,25 @@ class BaseModel(type):
         return model
 
     @classmethod
-    def _get_connection(mcs, attrs):
-        meta = attrs.get('Meta')
-        return getattr(meta, 'connection', None)
+    def _get_connection(mcs, name, attrs):
+        model = '.'.join((attrs.get('__module__'), name))
+        settings = importlib.import_module(os.environ.get('ODM_SETTINGS_MODULE'))
+        connection = None
+
+        for db_name, db_settings in settings.DATABASES.items():
+            if model in db_settings.get('models'):
+                connection = MongoConnection(
+                    host=db_settings.get('host'),
+                    port=db_settings.get('port'),
+                    database=db_name
+                )
+                break
+
+        if not connection:
+            exception = 'There is no database configuration for the `{}` model'
+            raise Exception(exception.format(model))
+
+        return connection
 
     @classmethod
     def _get_collection_name(mcs, name, attrs):
@@ -270,7 +290,7 @@ class MongoModel(metaclass=BaseModel):
         collection_name = field_instance.relation.get_collection_name()
         document_id = getattr(field_value, '_id', field_value)
         # TODO: To think of how to save a database name and access to it on call relation
-        database = None
+        database = field_instance.relation._connection.database
         field_value = DBRef(collection_name, document_id, database)
 
         return field_value

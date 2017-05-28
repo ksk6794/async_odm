@@ -4,9 +4,6 @@ from tests.integration.test_connection import TestConnection
 
 
 class Profile(MongoModel):
-    class Meta:
-        connection = TestConnection
-
     username = CharField()
     age = IntegerField()
     docs = ListField()

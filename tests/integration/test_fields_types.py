@@ -6,9 +6,6 @@ from tests.integration.test_connection import TestConnection
 
 
 class User(MongoModel):
-    class Meta:
-        connection = TestConnection
-
     username = CharField()
     age = IntegerField()
     billing = FloatField()

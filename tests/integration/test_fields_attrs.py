@@ -5,9 +5,6 @@ from tests.integration.test_connection import TestConnection
 
 
 class Settings(MongoModel):
-    class Meta:
-        connection = TestConnection
-
     param_1 = CharField(length=3)
     param_2 = CharField(unique=True)
     param_3 = CharField(blank=True)
@@ -15,9 +12,6 @@ class Settings(MongoModel):
 
 
 class Test(MongoModel):
-    class Meta:
-        connection = TestConnection
-
     param = BoolField(null=False)
 
 

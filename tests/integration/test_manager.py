@@ -5,9 +5,6 @@ from tests.integration.test_connection import TestConnection
 
 
 class Folder(MongoModel):
-    class Meta:
-        connection = TestConnection
-
     name = CharField()
 
 

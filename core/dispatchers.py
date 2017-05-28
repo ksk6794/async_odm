@@ -11,7 +11,7 @@ class MongoDispatcher:
 
     async def _get_collection(self):
         # TODO: Disallow conflicting collection names ('name', ...)
-        database = await self.connection().get_database()
+        database = await self.connection.get_database()
         collection = getattr(database, self.collection_name)
 
         return collection
