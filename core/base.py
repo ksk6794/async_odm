@@ -29,7 +29,7 @@ class BaseModel(type):
             attrs['_declared_fields'] = mcs._get_declared_fields(attrs)
 
         model = super().__new__(mcs, name, bases, attrs)
-        RelationManager().add_model(name, model)
+        RelationManager().add_model(model)
 
         return model
 
@@ -118,7 +118,7 @@ class RelationManager:
             cls._instance = object.__new__(cls)
         return cls._instance
 
-    def add_model(self, name, model):
+    def add_model(self, model):
         """
         Add the model to the list to implement the relations between another models.
         Model names can not be duplicated.
@@ -129,18 +129,11 @@ class RelationManager:
         name = '.'.join((model.__module__, model.__name__))
 
         if model.__name__ is not 'MongoModel':
-            if name not in self._models:
-                self._models[name] = model
-                self._process_relations(model)
+            self._models[name] = model
+            self._process_relations(model)
 
-                if self._waited_relations:
-                    self._handle_waited_relations()
-
-            else:
-                exception = 'Model with name {name} already registered.'.format(
-                    name=name
-                )
-                raise Exception(exception)
+            if self._waited_relations:
+                self._handle_waited_relations()
 
     def get_model(self, model_name):
         return self._models.get(model_name)
@@ -175,7 +168,7 @@ class RelationManager:
                     waited_relation = WaitedRelation(
                         field_name=field_name,
                         field_instance=field_instance,
-                        model_name=relation
+                        model_name='.'.join((model.__module__, model.__name__))
                     )
                     self._waited_relations.append(waited_relation)
 
@@ -295,9 +288,7 @@ class MongoModel(metaclass=BaseModel):
         # TODO: Can't get collection_name of None if relation class is a string.
         collection_name = field_instance.relation.get_collection_name()
         document_id = getattr(field_value, '_id', field_value)
-        # TODO: To think of how to save a database name and access to it on call relation
-        database = field_instance.relation._connection.database
-        field_value = DBRef(collection_name, document_id, database)
+        field_value = DBRef(collection_name, document_id)
 
         return field_value
 

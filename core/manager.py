@@ -2,6 +2,7 @@ import asyncio
 import functools
 from .node import Q, QNode
 from .utils import update
+from pymongo import DESCENDING, ASCENDING
 
 
 class DocumentsManager:
@@ -12,7 +13,11 @@ class DocumentsManager:
         self._all = False
         self._get = {}
         self._find = {}
+        self._sort = []
+        self._delete = False
         self._count = False
+        self._limit = False
+        self._skip = False
         self.__dict__.update(**kwargs)
 
     def all(self):
@@ -31,7 +36,16 @@ class DocumentsManager:
         self._find = update(self._find, self._to_query(invert=True, **kwargs))
         return self
 
-    def to_query(self, *args):
+    def sort(self, *args):
+        for field_name in args:
+            if isinstance(field_name, str):
+                field_name = field_name[1:] if field_name.startswith('-') else field_name
+                ordering = DESCENDING if field_name.startswith('-') else ASCENDING
+                self._sort.append((field_name, ordering))
+
+        return self
+
+    def q_query(self, *args):
         if args:
             q_items = [arg for arg in args if isinstance(arg, QNode)]
             query = functools.reduce((lambda q_cur, q_next: q_cur & q_next), q_items)
@@ -39,10 +53,14 @@ class DocumentsManager:
 
         return self
 
-    def raw(self, raw_condition):
-        if isinstance(raw_condition, dict):
-            update(self._find, raw_condition)
+    def raw_query(self, raw_query):
+        if isinstance(raw_query, dict):
+            update(self._find, raw_query)
 
+        return self
+
+    def delete(self):
+        self._delete = True
         return self
 
     def count(self):
@@ -80,11 +98,14 @@ class DocumentsManager:
         elif self._get:
             query = self.model.get_dispatcher().get(**self._get)
 
+        elif self._delete:
+            query = self.model.get_dispatcher().delete_many(**self._find)
+
         elif self._find:
-            query = self.model.get_dispatcher().find(**self._find)
+            query = self.model.get_dispatcher().find(sort=self._sort, **self._find)
 
         elif self._all:
-            query = self.model.get_dispatcher().find()
+            query = self.model.get_dispatcher().find(sort=self._sort)
 
         else:
             raise Exception('Wrong queryset')
@@ -93,6 +114,17 @@ class DocumentsManager:
 
     def _to_object(self, document):
         return self.model(**document)
+
+    def __getitem__(self, item):
+        if not isinstance(item, slice):
+            raise TypeError('\'{class_name}\' object does not support indexing'.format(
+                class_name=self.__class__.__name__)
+            )
+
+        self._skip = item.start
+        self._limit = item.stop
+
+        return self
 
     def __await__(self):
         result = yield from asyncio.wait_for(self._get_query(), 60)

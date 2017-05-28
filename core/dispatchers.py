@@ -49,19 +49,25 @@ class MongoDispatcher:
         elif count > 1:
             raise Exception('Got more than 1 document!')
 
-    async def find(self, **kwargs):
+    async def find(self, sort, **kwargs):
         collection = await self._get_collection()
-        cursor = collection.find(kwargs)
+        cursor = collection.find(kwargs, sort=sort)
         documents = []
 
-        # TODO: Return by parts
-        while await cursor.fetch_next:
-            documents.append(cursor.next_object())
+        # TODO: To give in parts
+        async for document in cursor:
+            documents.append(document)
 
         return documents
 
     async def delete(self, _id):
         collection = await self._get_collection()
         result = await collection.delete_one(filter={'_id': _id})
+
+        return result
+
+    async def delete_many(self, **kwargs):
+        collection = await self._get_collection()
+        result = await collection.delete_many(filter=kwargs)
 
         return result

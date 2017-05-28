@@ -7,14 +7,13 @@ class FilterConditionsTests(BaseAsyncTestCase):
         self.user_1 = Profile(username='Ivan', age=30, docs=[1, 2])
         self.user_2 = Profile(username='Peter', age=20, docs=[1, 2, 3, 4])
         self.user_3 = Profile(username='Geoff', age=18, docs=[1, 2, 4])
+
         await self.user_1.save()
         await self.user_2.save()
         await self.user_3.save()
 
     async def tearDown(self):
-        await self.user_1.delete()
-        await self.user_2.delete()
-        await self.user_3.delete()
+        await Profile.objects.all().delete()
 
     async def test_filter_gt(self):
         users = await Profile.objects.filter(age__gt=25)

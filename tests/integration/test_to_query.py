@@ -18,25 +18,25 @@ class ToQueryConditionsTests(BaseAsyncTestCase):
         await self.user_3.delete()
 
     async def test_to_query_q_or(self):
-        users = await Profile.objects.to_query(Q(age=20) | Q(username='Ivan'))
+        users = await Profile.objects.q_query(Q(age=20) | Q(username='Ivan'))
         self.assertEqual(len(users), 2)
 
     async def test_filter_q_or_count(self):
-        users_count = await Profile.objects.to_query(Q(age=20) | Q(username='Ivan')).count()
+        users_count = await Profile.objects.q_query(Q(age=20) | Q(username='Ivan')).count()
         self.assertEqual(users_count, 2)
 
     async def test_to_query_invert_q_and(self):
-        users = await Profile.objects.to_query(~Q(age=20) & ~Q(username='Ivan'))
+        users = await Profile.objects.q_query(~Q(age=20) & ~Q(username='Ivan'))[5]
 
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0].age, 18)
 
     async def test_to_query_invert_q_or(self):
-        users = await Profile.objects.to_query(~Q(age=20) | ~Q(username='Ivan'))
+        users = await Profile.objects.q_query(~Q(age=20) | ~Q(username='Ivan'))
         self.assertEqual(len(users), 3)
 
     async def test_to_query_q_or_and(self):
-        users = await Profile.objects.to_query((Q(username='Ivan') | Q(username='Peter')) & Q(age__gte=20))
+        users = await Profile.objects.q_query((Q(username='Ivan') | Q(username='Peter')) & Q(age__gte=20))
         self.assertEqual(len(users), 2)
         self.assertIn(users[0].age, (20, 30))
         self.assertIn(users[1].age, (20, 30))
