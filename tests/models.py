@@ -18,7 +18,7 @@ class Author(MongoModel):
     age = IntegerField(null=True)
     billing = FloatField(null=True)
     documents = ListField(null=True)
-    data = DictField(null=True)
+    data = DictField(null=True) 
 
 
 class Name(MongoModel):

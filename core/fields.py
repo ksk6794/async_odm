@@ -153,12 +153,20 @@ class ListField(Field):
     def __init__(self, null=True, length=None, unique=False, default=None):
         self.null, self.length, self.unique, self.default = null, length, unique, default
 
+    # For IDE tips
+    def __iter__(self):
+        return self
+
 
 class DictField(Field):
     type = dict
 
     def __init__(self, null=True, unique=False, length=None, default=None):
         self.null, self.unique, self.length, self.default = null, unique, length, default
+
+    # For IDE tips
+    def __iter__(self):
+        return self
 
 
 class DateTimeField(Field):

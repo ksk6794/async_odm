@@ -1,14 +1,13 @@
-import importlib
 import os
 import re
 import asyncio
+import importlib
 from bson import DBRef
-from collections import namedtuple
-
-from core.connection import MongoConnection
 from .utils import classproperty
+from collections import namedtuple
 from .manager import DocumentsManager
 from .dispatchers import MongoDispatcher
+from core.connection import MongoConnection
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
