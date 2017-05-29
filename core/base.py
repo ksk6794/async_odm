@@ -36,7 +36,12 @@ class BaseModel(type):
     @classmethod
     def _get_connection(mcs, name, attrs):
         model = '.'.join((attrs.get('__module__'), name))
-        settings = importlib.import_module(os.environ.get('ODM_SETTINGS_MODULE'))
+        settings_module = os.environ.get('ODM_SETTINGS_MODULE')
+
+        if not settings_module:
+            raise ImportError('Specify an `ODM_SETTINGS_MODULE` variable in the environment.')
+
+        settings = importlib.import_module(settings_module)
         connection = None
 
         for db_name, db_settings in settings.DATABASES.items():
