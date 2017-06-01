@@ -98,9 +98,9 @@ class IntegrationTests(BaseAsyncTestCase):
         post = await Post.objects.get(title='News', author=user)
 
         # TODO: Test it!
-        # posts = []
-        # async for post in user.posts:
-        #     posts.append(post)
+        posts = []
+        async for post in user.posts:
+            posts.append(post)
 
         self.assertEqual(post.title, 'News')
 

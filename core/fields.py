@@ -178,6 +178,7 @@ class DateTimeField(Field):
 
 class BaseRelationField(Field):
     backward_class = None
+    _query = None
 
     def _get_query(self):
         raise NotImplementedError
@@ -188,8 +189,11 @@ class BaseRelationField(Field):
     async def __aiter__(self):
         return self
 
+    # TODO: Test it!
     async def __anext__(self):
-        pass
+        async for item in self._get_query():
+            return item
+        raise StopAsyncIteration()
 
     def __await__(self):
         return self._get_query().__await__()
@@ -199,6 +203,7 @@ class BaseBackwardRelationField:
     _dispatcher = None
     _name = None
     _value = None
+    _query = None
 
     def _get_query(self):
         raise NotImplementedError
@@ -210,7 +215,9 @@ class BaseBackwardRelationField:
         return self
 
     async def __anext__(self):
-        pass
+        async for item in self._get_query():
+            return item
+        raise StopAsyncIteration()
 
     def __await__(self):
         return self._get_query().__await__()
@@ -218,19 +225,28 @@ class BaseBackwardRelationField:
 
 class _ForeignKeyBackward(BaseBackwardRelationField):
     def _get_query(self):
-        return self.relation.objects.filter(**{self._name: self._value})
+        if not self._query:
+            self._query = self.relation.objects.filter(**{self._name: self._value})
+
+        return self._query
 
 
 class _OneToOneBackward(BaseBackwardRelationField):
     def _get_query(self):
-        return self.relation.objects.get(**{self._name: self._value})
+        if not self._query:
+            self._query = self.relation.objects.get(**{self._name: self._value})
+
+        return self._query
 
 
 class ForeignKey(BaseRelationField):
     backward_class = _ForeignKeyBackward
 
     def _get_query(self):
-        return self.relation.objects.get(**{'_id': self._value.id})
+        if not self._query:
+            self._query = self.relation.objects.get(**{'_id': self._value.id})
+
+        return self._query
 
 
 class OneToOne(BaseRelationField):
