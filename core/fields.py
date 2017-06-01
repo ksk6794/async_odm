@@ -195,6 +195,7 @@ class BaseBackwardRelationField:
 class _ForeignKeyBackward(BaseBackwardRelationField):
     def __await__(self):
         kwargs = {self._name: self._value}
+        # TODO: To give up wait_for
         result = yield from asyncio.wait_for(self.relation.objects.filter(**kwargs), 60)
         return result
 
