@@ -179,8 +179,20 @@ class DateTimeField(Field):
 class BaseRelationField(Field):
     backward_class = None
 
+    def _get_query(self):
+        raise NotImplementedError
+
     def __init__(self, relation, related_name=None, null=True):
         self.relation, self.related_name, self.null = relation, related_name, null
+
+    async def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        pass
+
+    def __await__(self):
+        return self._get_query().__await__()
 
 
 class BaseBackwardRelationField:
@@ -188,32 +200,37 @@ class BaseBackwardRelationField:
     _name = None
     _value = None
 
+    def _get_query(self):
+        raise NotImplementedError
+
     def __init__(self, relation):
         self.relation = relation
 
+    async def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        pass
+
+    def __await__(self):
+        return self._get_query().__await__()
+
 
 class _ForeignKeyBackward(BaseBackwardRelationField):
-    def __await__(self):
-        kwargs = {self._name: self._value}
-        # TODO: To give up wait_for
-        result = yield from asyncio.wait_for(self.relation.objects.filter(**kwargs), 60)
-        return result
+    def _get_query(self):
+        return self.relation.objects.filter(**{self._name: self._value})
 
 
 class _OneToOneBackward(BaseBackwardRelationField):
-    def __await__(self):
-        kwargs = {self._name: self._value}
-        result = yield from asyncio.wait_for(self.relation.objects.get(**kwargs), 60)
-        return result
+    def _get_query(self):
+        return self.relation.objects.get(**{self._name: self._value})
 
 
 class ForeignKey(BaseRelationField):
     backward_class = _ForeignKeyBackward
 
-    def __await__(self):
-        kwargs = {'_id': self._value.id}
-        result = yield from asyncio.wait_for(self.relation.objects.get(**kwargs), 60)
-        return result
+    def _get_query(self):
+        return self.relation.objects.get(**{'_id': self._value.id})
 
 
 class OneToOne(BaseRelationField):
@@ -223,7 +240,5 @@ class OneToOne(BaseRelationField):
         super().__init__(*args, **kwargs)
         self.unique = True
 
-    def __await__(self):
-        kwargs = {'_id': self._value.id}
-        result = yield from asyncio.wait_for(self.relation.objects.get(**kwargs), 60)
-        return result
+    def _get_query(self):
+        return self.relation.objects.get(**{'_id': self._value.id})
