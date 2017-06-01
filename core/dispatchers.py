@@ -70,13 +70,11 @@ class MongoDispatcher:
                 params[param_name] = param_value
 
         cursor = collection.find(**params)
-        documents = []
 
-        # TODO: To give in parts
-        async for document in cursor:
-            documents.append(document)
+        # async for document in cursor:
+        #     documents.append(document)
 
-        return documents
+        return cursor
 
     async def delete_one(self, _id):
         collection = await self._get_collection()

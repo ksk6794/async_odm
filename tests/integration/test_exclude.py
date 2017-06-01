@@ -52,12 +52,21 @@ class ExcludeConditionsTests(BaseAsyncTestCase):
         self.assertEqual(users[0].age, 30)
 
     async def test_exclude_all(self):
-        users = await Profile.objects.exclude(docs__all=[2, 4])
+        users_query = Profile.objects.exclude(docs__all=[2, 4])
+        users = []
+
+        async for user in users_query:
+            users.append(user)
 
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0].username, 'Ivan')
 
-        users = await Profile.objects.exclude(docs__all=[1, 2])
+        users_query = Profile.objects.exclude(docs__all=[1, 2])
+        users = []
+
+        async for user in users_query:
+            users.append(user)
+
         self.assertEqual(len(users), 0)
 
     async def test_multiple_exclude(self):
