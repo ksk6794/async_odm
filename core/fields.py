@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 
 
@@ -199,10 +198,7 @@ class BaseRelationField(Field):
         return self._get_query().__await__()
 
 
-class BaseBackwardRelationField:
-    _dispatcher = None
-    _name = None
-    _value = None
+class BaseBackwardRelationField(Field):
     _query = None
 
     def _get_query(self):
@@ -226,7 +222,8 @@ class BaseBackwardRelationField:
 class _ForeignKeyBackward(BaseBackwardRelationField):
     def _get_query(self):
         if not self._query:
-            self._query = self.relation.objects.filter(**{self._name: self._value})
+            filter_kwargs = {self._name: self._value}
+            self._query = self.relation.objects.filter(**filter_kwargs)
 
         return self._query
 
@@ -234,7 +231,8 @@ class _ForeignKeyBackward(BaseBackwardRelationField):
 class _OneToOneBackward(BaseBackwardRelationField):
     def _get_query(self):
         if not self._query:
-            self._query = self.relation.objects.get(**{self._name: self._value})
+            filter_kwargs = {self._name: self._value}
+            self._query = self.relation.objects.get(**filter_kwargs)
 
         return self._query
 
@@ -244,7 +242,8 @@ class ForeignKey(BaseRelationField):
 
     def _get_query(self):
         if not self._query:
-            self._query = self.relation.objects.get(**{'_id': self._value.id})
+            get_kwargs = {'_id': self._value.id}
+            self._query = self.relation.objects.get(**get_kwargs)
 
         return self._query
 
@@ -257,4 +256,5 @@ class OneToOne(BaseRelationField):
         self.unique = True
 
     def _get_query(self):
-        return self.relation.objects.get(**{'_id': self._value.id})
+        get_kwargs = {'_id': self._value.id}
+        return self.relation.objects.get(**get_kwargs)
