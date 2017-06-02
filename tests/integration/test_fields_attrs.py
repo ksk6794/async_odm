@@ -1,7 +1,6 @@
 from core.fields import CharField, BoolField
 from tests.base import BaseAsyncTestCase
 from core.base import MongoModel
-from tests.integration.test_connection import TestConnection
 
 
 class Settings(MongoModel):
