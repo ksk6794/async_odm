@@ -1,8 +1,9 @@
+import os
+import glob
+import json
+import inspect
 import asyncio
 import importlib
-import inspect
-import json
-import os
 
 from core.base import MongoModel
 
@@ -11,41 +12,68 @@ class Inspector:
     BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
     @staticmethod
-    def is_mongo_model(obj):
-        return inspect.isclass(obj) and issubclass(obj, MongoModel) and getattr(obj, '_declared_fields')
+    def is_odm_model(obj):
+        return inspect.isclass(obj) and issubclass(obj, MongoModel)
 
-    def get_models(self):
+    @staticmethod
+    def has_declared_fields(obj):
+        return hasattr(obj, 'get_declared_fields') and obj.get_declared_fields()
+
+    def get_modules(self):
         # Recursive walk by project directory
-        for dirpath, dirnames, filenames in os.walk(self.BASE_PATH):
-            module_path = dirpath[len(self.BASE_PATH) + 1:].replace('/', '.')
+        for filename in glob.iglob(self.BASE_PATH + '/**/*.py', recursive=True):
+            # Cut the BASE_PATH and .py extension from filename
+            module_path = filename[len(self.BASE_PATH) + 1:-3].replace('/', '.')
+            module_object = importlib.import_module(module_path)
+            yield module_object
 
-            # Check each file
-            for filename in filenames:
-                if filename.endswith('.py'):
-                    filename = filename[:-3]
-                    module_name = '.'.join([module_path, filename]) if module_path else filename
-                    module_object = importlib.import_module(module_name)
+    def get_odm_models(self):
+        for module_object in self.get_modules():
+            for name, obj in module_object.__dict__.copy().items():
+                if self.is_odm_model(obj) and self.has_declared_fields(obj):
+                    model = obj
+                    yield model
 
-                    for name, obj in module_object.__dict__.copy().items():
-                        if self.is_mongo_model(obj):
-                            yield obj
+    async def process_models(self):
+        for model in self.get_odm_models():
+            await self.process_model(model)
 
+    async def process_model(self, model):
+        for field_name, field_instance in model.get_declared_fields().items():
+
+            # Process indexes
+            unique = getattr(field_instance, 'unique', None)
+
+            if unique is not None:
+                dispatcher = model._dispatcher
+                collection = await dispatcher._get_collection()
+                connection = dispatcher.connection
+                database = await connection.get_database()
+
+                # Get collection Indexes
+                collection_indexes = await database.eval(
+                    'db.{collection_name}.getIndexes()'.format(collection_name=collection.name)
+                )
+                # TODO: Check for presence or absence
+
+                # Create Index
+                # index_name = await collection.create_index(field_name, unique=True)
+
+                # Drop Index
+                # index_res = await collection.drop_index()
+                
+                # Get collection info (validators)
+                # collection_info = await database.eval('db.getCollectionInfos({data})'.format(
+                #     data=json.dumps({'name': collection.name})
+                # ))
+
+    async def process_field(self, model, field):
+        pass
 
 # https://habrahabr.ru/post/192870/#1
 # https://www.compose.com/articles/document-validation-in-mongodb-by-example/
 async def main():
-    for model in Inspector().get_models():
-        dispatcher = model._dispatcher
-        connection = dispatcher.connection
-        collection = await dispatcher._get_collection()
-        index_res = await collection.create_index('author')
-
-        database = await connection.get_database()
-        collection_indexes = await database.eval('db.{collection_name}.getIndexes()'.format(collection_name=collection.name))
-
-        data = json.dumps({'name': collection.name})
-        collection_info = await database.eval('db.getCollectionInfos({})'.format(data))
-        pass
+    await Inspector().process_models()
 
 
 if __name__ == '__main__':
