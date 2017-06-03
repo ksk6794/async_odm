@@ -51,9 +51,11 @@ class Inspector:
                 database = await connection.get_database()
 
                 # Get collection Indexes
-                collection_indexes = await database.eval(
-                    'db.{collection_name}.getIndexes()'.format(collection_name=collection.name)
-                )
+                # collection_indexes = await database.eval(
+                #     'db.{collection_name}.getIndexes()'.format(
+                #         collection_name=collection.name
+                #     )
+                # )
                 # TODO: Check for presence or absence
 
                 # Create Index
@@ -63,9 +65,11 @@ class Inspector:
                 # index_res = await collection.drop_index()
                 
                 # Get collection info (validators)
-                # collection_info = await database.eval('db.getCollectionInfos({data})'.format(
-                #     data=json.dumps({'name': collection.name})
-                # ))
+                # collection_info = await database.eval(
+                #     'db.getCollectionInfos({data})'.format(
+                #         data=json.dumps({'name': collection.name})
+                #     )
+                # )
 
     async def process_field(self, model, field):
         pass
