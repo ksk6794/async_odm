@@ -1,11 +1,11 @@
 from datetime import datetime
 from core.base import MongoModel
 from tests.base import BaseAsyncTestCase
-from core.fields import CharField, IntegerField, ListField, DictField, FloatField, DateTimeField, BoolField
+from core.fields import StringField, IntegerField, ListField, DictField, FloatField, DateTimeField, BoolField
 
 
 class User(MongoModel):
-    username = CharField()
+    username = StringField()
     age = IntegerField()
     billing = FloatField()
     addresses = ListField()

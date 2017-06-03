@@ -1,10 +1,10 @@
 from core.base import MongoModel
-from core.fields import CharField
+from core.fields import StringField
 from tests.base import BaseAsyncTestCase
 
 
 class Folder(MongoModel):
-    name = CharField()
+    name = StringField()
 
 
 class QueryManagerTests(BaseAsyncTestCase):

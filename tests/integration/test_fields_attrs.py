@@ -1,13 +1,13 @@
-from core.fields import CharField, BoolField
+from core.fields import StringField, BoolField
 from tests.base import BaseAsyncTestCase
 from core.base import MongoModel
 
 
 class Settings(MongoModel):
-    param_1 = CharField(length=3)
-    param_2 = CharField(unique=True)
-    param_3 = CharField(blank=True)
-    param_4 = CharField(default=lambda: 'test')
+    param_1 = StringField(length=3)
+    param_2 = StringField(unique=True)
+    param_3 = StringField(blank=True)
+    param_4 = StringField(default=lambda: 'test')
 
 
 class Test(MongoModel):

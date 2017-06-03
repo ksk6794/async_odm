@@ -125,7 +125,7 @@ class BoolField(Field):
         self.null, self.default = null, default
 
 
-class CharField(Field):
+class StringField(Field):
     type = str
 
     def __init__(self, null=None, blank=None, length=None, unique=None, default=None):

@@ -1,6 +1,6 @@
 from datetime import datetime
 from core.dispatchers import MongoDispatcher
-from core.fields import CharField, ForeignKey
+from core.fields import StringField, ForeignKey
 from tests.base import BaseAsyncTestCase
 from tests.models import Author, Post, Name
 
@@ -20,7 +20,7 @@ class IntegrationTests(BaseAsyncTestCase):
         self.assertTrue(isinstance(name._dispatcher, MongoDispatcher))
         self.assertEqual(name._dispatcher.collection_name, 'name_collection')
         self.assertEqual(len(name._declared_fields), 1)
-        self.assertTrue(isinstance(name._declared_fields.get('name'), CharField))
+        self.assertTrue(isinstance(name._declared_fields.get('name'), StringField))
 
         # TODO: В поле name, в _value попадает значение с других тестов.
         # TODO Это не критично и переписывается при сохранении, но все-же лучше поправить!
@@ -139,6 +139,7 @@ class IntegrationTests(BaseAsyncTestCase):
         user_2 = Author(username='Bill')
         await user_2.save()
 
+        users = await Author.objects.all()
         users_count = await Author.objects.all().count()
 
         self.assertEqual(users_count, 2)

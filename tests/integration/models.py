@@ -1,9 +1,9 @@
 from core.base import MongoModel
-from core.fields import CharField, IntegerField, ListField, DictField
+from core.fields import StringField, IntegerField, ListField, DictField
 
 
 class Profile(MongoModel):
-    username = CharField()
+    username = StringField()
     age = IntegerField()
     docs = ListField()
     data = DictField()

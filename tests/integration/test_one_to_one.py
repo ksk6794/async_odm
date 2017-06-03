@@ -1,15 +1,15 @@
 from core.base import MongoModel
-from core.fields import CharField, OneToOne
+from core.fields import StringField, OneToOne
 from tests.base import BaseAsyncTestCase
 
 
 class UserTest(MongoModel):
-    username = CharField()
+    username = StringField()
     profile = OneToOne('ProfileTest', related_name='user')
 
 
 class ProfileTest(MongoModel):
-    position = CharField()
+    position = StringField()
 
 
 class ToQueryConditionsTests(BaseAsyncTestCase):
