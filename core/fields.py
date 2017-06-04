@@ -7,7 +7,6 @@ class Field:
     Base class of any field.
     """
     type = None
-    _model_instance = None
     _dispatcher = None
     _name = None
     _value = None
@@ -48,7 +47,6 @@ class Field:
             null = getattr(self, 'null', True) or True
             blank = getattr(self, 'blank', True) or True
             length = getattr(self, 'length', None)
-            unique = getattr(self, 'unique', False) or False
             default = getattr(self, 'default', None)
 
             if default is not None and not self._value:
@@ -89,21 +87,6 @@ class Field:
                 if blank is False and self._value == '':
                     exception = 'Field `{field_name}` can not be blank'.format(
                         field_name=self._name
-                    )
-                    raise ValueError(exception)
-
-            if unique:
-                # TODO: In the future, remove this and implement it in migrations using unique indexes.
-                object_id = self._model_instance.get_object_id()
-                filter_kwargs = {self._name: self._value} if not isinstance(self, OneToOne) else {self._name: self._value.id}
-                exclude_kwargs = {'_id': object_id} if object_id else {}
-
-                count = await self._model_instance.objects.filter(**filter_kwargs).exclude(**exclude_kwargs).count()
-
-                if count > 0:
-                    exception = 'Field `{field_name}` with value `{field_value}` already exists'.format(
-                        field_name=self._name,
-                        field_value=self._value
                     )
                     raise ValueError(exception)
 

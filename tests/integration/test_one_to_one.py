@@ -31,7 +31,7 @@ class ToQueryConditionsTests(BaseAsyncTestCase):
         try:
             user_2 = UserTest(username='Vasya2', profile=profile)
             await user_2.save()
-        except BaseException:
+        except BaseException as e:
             exception = True
 
         self.assertTrue(exception)

@@ -38,9 +38,8 @@ class FieldsAttrsTests(BaseAsyncTestCase):
         try:
             settings_2 = Settings(param_2='test')
             await settings_2.save()
-        except Exception as e:
+        except BaseException as e:
             exception = True
-            self.assertTrue(isinstance(e, ValueError))
 
         self.assertTrue(exception)
         await settings.delete()

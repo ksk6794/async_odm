@@ -359,7 +359,6 @@ class MongoModel(metaclass=BaseModel):
         for field_name, field_instance in self.get_declared_fields().items():
             field_value = self.__dict__.get(field_name)
             field_instance._value = field_value
-            field_instance._model_instance = self
 
             if isinstance(field_instance, Field):
                 # Validate field value
