@@ -19,7 +19,8 @@ class IndexInspector:
         collection = await self.get_collection(model)
 
         unique = getattr(field_instance, 'unique', False)
-        index = getattr(field_instance, 'index', None) if not unique else ASCENDING
+        index = getattr(field_instance, 'index', None)
+        index = ASCENDING if unique and not index else index
         field_name = field_instance.get_field_name()
 
         # Get collection Indexes
@@ -31,7 +32,7 @@ class IndexInspector:
 
         for index_name, index_data in collection_indexes.items():
             index_key = index_data.get('key', {})
-            index_unique = index_data.get('unique', None)
+            index_unique = index_data.get('unique', False)
 
             if field_name in [key[0] for key in index_key] and isinstance(index_unique, bool):
                 cur_index_name = index_name
@@ -39,15 +40,50 @@ class IndexInspector:
                 cur_index_unique = index_unique
                 break
 
-        if index is not None and isinstance(unique, bool) and (index != cur_index_type or unique != cur_index_unique):
-            if cur_index_name:
-                # Remove unique index
-                await collection.drop_index(cur_index_name)
-                print('Index for field `{}` is removed!'.format(field_name))
+        if index or unique:
+            if not cur_index_name:
+                # Create index
+                await collection.create_index([(field_name, index)], unique=unique)
+                print('----------\n'
+                      'Index for field `{field_name}` is created!\n'
+                      'Index type: {index_type}\n'
+                      'Unique: {unique}\n'
+                      '----------\n'.
+                      format(
+                        field_name=field_name,
+                        index_type=index,
+                        unique=unique,
+                      ))
+            else:
+                if index != cur_index_type or unique != cur_index_unique:
+                    # Remove unique index
+                    await collection.drop_index(cur_index_name)
 
-            # Create index
-            await collection.create_index([(field_name, index)], unique=unique)
-            print('Index for field `{}` is created!'.format(field_name))
+                    # Create index
+                    await collection.create_index([(field_name, index)], unique=unique)
+                    print('----------\n'
+                          'Index for field `{field_name}` is changed!\n'
+                          'Index type: {index_type}\n'
+                          'Unique: {unique}\n'
+                          '----------\n'.
+                          format(
+                            field_name=field_name,
+                            index_type=index,
+                            unique=unique,
+                          ))
+        elif cur_index_name:
+            # Remove unique index
+            await collection.drop_index(cur_index_name)
+            print('----------\n'
+                  'Index for field `{field_name}` is removed!\n'
+                  'Index type: {index_type}\n'
+                  'Unique: {unique}\n'
+                  '----------\n'.
+                  format(
+                    field_name=field_name,
+                    index_type=index,
+                    unique=unique,
+                  ))
 
             # Get collection info (validators)
             # collection_info = await database.eval(
@@ -60,8 +96,8 @@ class IndexInspector:
 class Inspector:
     BASE_PATH = os.path.dirname(os.path.abspath(__file__))
     PARAMS_INSPECTORS = {
-        'index': IndexInspector,
         'unique': IndexInspector,
+        'index': IndexInspector,
     }
 
     @staticmethod

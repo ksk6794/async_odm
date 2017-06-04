@@ -1,4 +1,7 @@
 from uuid import uuid4
+
+from pymongo import DESCENDING, ASCENDING
+
 from core.base import MongoModel
 from core.fields import StringField, IntegerField, FloatField, ListField, DictField, DateTimeField, ForeignKey
 
@@ -24,7 +27,7 @@ class Name(MongoModel):
     class Meta:
         collection_name = 'name_collection'
 
-    name = StringField(unique=False, default=uuid4)
+    name = StringField(unique=False, index=DESCENDING, default=uuid4)
 
     @staticmethod
     def validate_name(value):

@@ -137,10 +137,10 @@ class BoolField(Field):
 
 class StringField(Field):
     type = str
-    kwargs = 'null', 'blank', 'length', 'unique', 'default'
+    kwargs = 'null', 'blank', 'length', 'unique', 'index', 'default'
 
-    def __init__(self, null=True, blank=True, length=None, unique=False, default=None):
-        self.null, self.blank, self.length, self.unique, self.default = null, blank, length, unique, default
+    def __init__(self, null=True, blank=True, length=None, unique=False, index=None, default=None):
+        self.null, self.blank, self.length, self.unique, self.index, self.default = null, blank, length, unique, index, default
 
 
 class IntegerField(Field):
