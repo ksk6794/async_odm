@@ -4,12 +4,65 @@ import json
 import inspect
 import asyncio
 import importlib
-
+from pymongo import ASCENDING
 from core.base import MongoModel
+
+
+class IndexInspector:
+    @staticmethod
+    async def get_collection(model):
+        dispatcher = model.get_dispatcher()
+        collection = await dispatcher.get_collection()
+        return collection
+
+    async def process(self, model, field_instance):
+        collection = await self.get_collection(model)
+
+        unique = getattr(field_instance, 'unique', False)
+        index = getattr(field_instance, 'index', None) if not unique else ASCENDING
+        field_name = field_instance.get_field_name()
+
+        # Get collection Indexes
+        collection_indexes = await collection.index_information()
+
+        cur_index_name = None
+        cur_index_type = None
+        cur_index_unique = None
+
+        for index_name, index_data in collection_indexes.items():
+            index_key = index_data.get('key', {})
+            index_unique = index_data.get('unique', None)
+
+            if field_name in [key[0] for key in index_key] and isinstance(index_unique, bool):
+                cur_index_name = index_name
+                cur_index_type = {k: v for k, v in index_key}.get(field_name)
+                cur_index_unique = index_unique
+                break
+
+        if index is not None and isinstance(unique, bool) and (index != cur_index_type or unique != cur_index_unique):
+            if cur_index_name:
+                # Remove unique index
+                await collection.drop_index(cur_index_name)
+                print('Index for field `{}` is removed!'.format(field_name))
+
+            # Create index
+            await collection.create_index([(field_name, index)], unique=unique)
+            print('Index for field `{}` is created!'.format(field_name))
+
+            # Get collection info (validators)
+            # collection_info = await database.eval(
+            #     'db.getCollectionInfos({data})'.format(
+            #         data=json.dumps({'name': collection.name})
+            #     )
+            # )
 
 
 class Inspector:
     BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+    PARAMS_INSPECTORS = {
+        'index': IndexInspector,
+        'unique': IndexInspector,
+    }
 
     @staticmethod
     def is_odm_model(obj):
@@ -40,39 +93,12 @@ class Inspector:
 
     async def process_model(self, model):
         for field_name, field_instance in model.get_declared_fields().items():
+            for param_name in field_instance.kwargs:
+                param_inspector = self.PARAMS_INSPECTORS.get(param_name)
 
-            # Process indexes
-            unique = getattr(field_instance, 'unique', None)
+                if param_inspector:
+                    await param_inspector().process(model, field_instance)
 
-            if unique is not None:
-                dispatcher = model._dispatcher
-                collection = await dispatcher._get_collection()
-                connection = dispatcher.connection
-                database = await connection.get_database()
-
-                # Get collection Indexes
-                # collection_indexes = await database.eval(
-                #     'db.{collection_name}.getIndexes()'.format(
-                #         collection_name=collection.name
-                #     )
-                # )
-                # TODO: Check for presence or absence
-
-                # Create Index
-                # index_name = await collection.create_index(field_name, unique=True)
-
-                # Drop Index
-                # index_res = await collection.drop_index()
-                
-                # Get collection info (validators)
-                # collection_info = await database.eval(
-                #     'db.getCollectionInfos({data})'.format(
-                #         data=json.dumps({'name': collection.name})
-                #     )
-                # )
-
-    async def process_field(self, model, field):
-        pass
 
 # https://habrahabr.ru/post/192870/#1
 # https://www.compose.com/articles/document-validation-in-mongodb-by-example/

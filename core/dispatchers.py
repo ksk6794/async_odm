@@ -7,12 +7,12 @@ class MongoDispatcher:
         self.collection_name = collection_name
 
     async def count(self, **kwargs):
-        collection = await self._get_collection()
+        collection = await self.get_collection()
         count = await collection.count(kwargs)
 
         return count
 
-    async def _get_collection(self):
+    async def get_collection(self):
         # TODO: Disallow conflicting collection names ('name', ...)
         database = await self.connection.get_database()
         collection = getattr(database, self.collection_name)
@@ -21,7 +21,7 @@ class MongoDispatcher:
 
     async def create(self, **kwargs):
         document = kwargs
-        collection = await self._get_collection()
+        collection = await self.get_collection()
         insert_result = await collection.insert_one(document)
 
         document = None
@@ -32,7 +32,7 @@ class MongoDispatcher:
         return document
 
     async def update(self, _id, **kwargs):
-        collection = await self._get_collection()
+        collection = await self.get_collection()
         document = await collection.find_and_modify(query={'_id': _id}, update=kwargs)
 
         return document
@@ -41,7 +41,7 @@ class MongoDispatcher:
         count = await self.count(**kwargs)
 
         if count == 1:
-            collection = await self._get_collection()
+            collection = await self.get_collection()
             document = await collection.find_one(kwargs)
 
             return document
@@ -53,7 +53,7 @@ class MongoDispatcher:
             raise MultipleObjectsReturned('Got more than 1 document - it returned {count}'.format(count=count))
 
     async def find(self, **kwargs):
-        collection = await self._get_collection()
+        collection = await self.get_collection()
 
         # TODO: Move check and processing to DocumentsManager
         available_params = {
@@ -77,13 +77,13 @@ class MongoDispatcher:
         return cursor
 
     async def delete_one(self, _id):
-        collection = await self._get_collection()
+        collection = await self.get_collection()
         result = await collection.delete_one(filter={'_id': _id})
 
         return result
 
     async def delete_many(self, **kwargs):
-        collection = await self._get_collection()
+        collection = await self.get_collection()
         result = await collection.delete_many(filter=kwargs)
 
         return result
