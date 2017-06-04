@@ -40,46 +40,34 @@ class IndexInspector:
                 cur_index_unique = index_unique
                 break
 
+        event = None
+
         if index or unique:
             if not cur_index_name:
                 # Create index
                 await collection.create_index([(field_name, index)], unique=unique)
-                print('----------\n'
-                      'Index for field `{field_name}` is created!\n'
-                      'Index type: {index_type}\n'
-                      'Unique: {unique}\n'
-                      '----------\n'.
-                      format(
-                        field_name=field_name,
-                        index_type=index,
-                        unique=unique,
-                      ))
+                event = 'created'
             else:
                 if index != cur_index_type or unique != cur_index_unique:
-                    # Remove unique index
+                    # Change index
                     await collection.drop_index(cur_index_name)
-
-                    # Create index
                     await collection.create_index([(field_name, index)], unique=unique)
-                    print('----------\n'
-                          'Index for field `{field_name}` is changed!\n'
-                          'Index type: {index_type}\n'
-                          'Unique: {unique}\n'
-                          '----------\n'.
-                          format(
-                            field_name=field_name,
-                            index_type=index,
-                            unique=unique,
-                          ))
+                    event = 'changed'
+
         elif cur_index_name:
             # Remove unique index
             await collection.drop_index(cur_index_name)
+            event = 'removed'
+
+        # Log event
+        if event:
             print('----------\n'
-                  'Index for field `{field_name}` is removed!\n'
+                  'Index for field `{field_name}` was {event}!\n'
                   'Index type: {index_type}\n'
                   'Unique: {unique}\n'
                   '----------\n'.
                   format(
+                    event=event,
                     field_name=field_name,
                     index_type=index,
                     unique=unique,

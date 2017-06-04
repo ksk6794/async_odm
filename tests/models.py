@@ -27,7 +27,7 @@ class Name(MongoModel):
     class Meta:
         collection_name = 'name_collection'
 
-    name = StringField(unique=False, index=DESCENDING, default=uuid4)
+    name = StringField(unique=True, index=ASCENDING, default=uuid4)
 
     @staticmethod
     def validate_name(value):
