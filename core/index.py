@@ -5,6 +5,6 @@ class CompositeIndex:
         self._cur = 0
 
     def __setattr__(self, key, value):
-        if key == 'composite_dict' and not isinstance(value, dict):
+        if key == 'composite_dict' and not isinstance(value, (tuple, list)):
             raise ValueError('You must specify dict like {field_name: index_type}')
         super().__setattr__(key, value)

@@ -9,8 +9,8 @@ class Post(MongoModel):
     class Meta:
         collection_name = 'post'
         composite_indexes = (
-            CompositeIndex({'name': ASCENDING, 'author': DESCENDING}, unique=True),
-            CompositeIndex({'author': DESCENDING, 'published': ASCENDING}, unique=True)
+            CompositeIndex((('name', ASCENDING), ('author', DESCENDING)), unique=True),
+            CompositeIndex((('author', DESCENDING), ('published', ASCENDING)), unique=True)
         )
 
     title = StringField()

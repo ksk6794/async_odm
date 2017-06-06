@@ -112,40 +112,13 @@ class CompositeIndexInspector(BaseIndexInspector):
         # TODO: 2. Find indexes in MongoDB that are not in Meta - delete them.
 
         if isinstance(composite_indexes, (tuple, list)):
-            for composite_index in composite_indexes:
-                if isinstance(composite_index, CompositeIndex):
-                    unique = composite_index.unique
-                    cur_index_name = None
-                    cur_index_unique = None
-                    cur_index_modified = False
+            mongo_indexes = set(tuple(item['key']) for item in collection_indexes.values() if len(item['key']) > 1)
+            meta_indexes = set(item.composite_dict for item in composite_indexes)
+            pass
 
-                    for index_name, index_data in collection_indexes.items():
-                        index_key = index_data.get('key', {})
-                        index_unique = index_data.get('unique', False)
-
-                        # Compound indexes have several keys
-                        is_composite = len(index_key) > 1
-
-                        # The index consists of the same fields
-                        same_fields = set(composite_index.composite_dict.keys()) == set(key[0] for key in index_key)
-
-                        if is_composite and same_fields:
-                            cur_index_name = index_name
-                            cur_index_unique = index_unique
-
-                            # Check the fields for consistency
-                            fields_modified = set(index_key) != set(composite_index.composite_dict.items())
-                            unique_modified = index_unique != cur_index_unique
-
-                            if fields_modified or unique_modified:
-                                # Composite index was modified
-                                cur_index_modified = True
-
-                            break
-
-                    # Create composite index
-                    indexes = [(field_name, index) for field_name, index in composite_index.composite_dict.items()]
-                    await collection.create_index(indexes, unique=unique)
+        # Create composite index
+        # indexes = [(field_name, index) for field_name, index in composite_index.composite_dict.items()]
+        # await collection.create_index(indexes, unique=unique)
 
 
 class Inspector:
