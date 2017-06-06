@@ -104,13 +104,12 @@ class CompositeIndexInspector(BaseIndexInspector):
         collection = await self.get_collection(model)
 
         meta_data = getattr(model, 'Meta', None)
-        composite_indexes = getattr(meta_data, 'composite_indexes', None)
+        composite_indexes = getattr(meta_data, 'composite_indexes', ())
 
         collection_indexes = await self.get_indexes(collection)
 
-        # TODO: Get set of deleted composite indexes (only composite).
-        composite_indexes_from_meta = set([tuple(item.composite_dict.keys()) for item in composite_indexes if isinstance(item, CompositeIndex)])
-        cur_composite_indexes = set(tuple(field[0] for field in index) for index in [item.get('key') for item in collection_indexes.values()])
+        # TODO: 1. Find Meta Indexes missing in MongoDB - create them;
+        # TODO: 2. Find indexes in MongoDB that are not in Meta - delete them.
 
         if isinstance(composite_indexes, (tuple, list)):
             for composite_index in composite_indexes:
