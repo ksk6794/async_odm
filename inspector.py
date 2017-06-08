@@ -4,13 +4,11 @@ import json
 import inspect
 import asyncio
 import importlib
-from collections import namedtuple
-
 from pymongo import ASCENDING
 from pymongo.errors import OperationFailure
 
 from core.base import MongoModel
-from core.index import CompositeIndex
+from core.index import Index
 
 
 class BaseIndexInspector:
@@ -99,12 +97,12 @@ class CompositeIndexInspector(BaseIndexInspector):
         collection = await self.get_collection(model)
 
         meta_data = getattr(model, 'Meta', None)
-        composite_indexes = getattr(meta_data, 'composite_indexes', ())
+        indexes = getattr(meta_data, 'indexes', ())
         collection_indexes = await self.get_indexes(collection)
 
-        if isinstance(composite_indexes, (tuple, list)):
+        if isinstance(indexes, (tuple, list)):
             mongo_indexes = set(tuple(item['key']) + (item.get('unique', False),) for item in collection_indexes.values() if len(item['key']) > 1)
-            meta_indexes = set(item.composite_dict + (item.unique,) for item in composite_indexes)
+            meta_indexes = set(item.composite_dict + (item.unique,) for item in indexes if isinstance(item, Index))
 
             # Find indexes in MongoDB that are not in Meta - delete them
             indexes_for_delete = mongo_indexes - meta_indexes

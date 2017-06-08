@@ -1,4 +1,4 @@
-class CompositeIndex:
+class Index:
     def __init__(self, composite_dict, unique=False):
         self.composite_dict = composite_dict
         self.unique = unique
