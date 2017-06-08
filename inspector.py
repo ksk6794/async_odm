@@ -4,6 +4,8 @@ import json
 import inspect
 import asyncio
 import importlib
+from collections import namedtuple
+
 from pymongo import ASCENDING
 from pymongo.errors import OperationFailure
 
@@ -91,13 +93,6 @@ class FieldIndexInspector(BaseIndexInspector):
                     unique=unique,
                   ))
 
-            # Get collection info (validators)
-            # collection_info = await database.eval(
-            #     'db.getCollectionInfos({data})'.format(
-            #         data=json.dumps({'name': collection.name})
-            #     )
-            # )
-
 
 class CompositeIndexInspector(BaseIndexInspector):
     async def process(self, model):
@@ -105,20 +100,33 @@ class CompositeIndexInspector(BaseIndexInspector):
 
         meta_data = getattr(model, 'Meta', None)
         composite_indexes = getattr(meta_data, 'composite_indexes', ())
-
         collection_indexes = await self.get_indexes(collection)
 
-        # TODO: 1. Find Meta Indexes missing in MongoDB - create them;
-        # TODO: 2. Find indexes in MongoDB that are not in Meta - delete them.
-
         if isinstance(composite_indexes, (tuple, list)):
-            mongo_indexes = set(tuple(item['key']) for item in collection_indexes.values() if len(item['key']) > 1)
-            meta_indexes = set(item.composite_dict for item in composite_indexes)
-            pass
+            mongo_indexes = set(tuple(item['key']) + (item.get('unique', False),) for item in collection_indexes.values() if len(item['key']) > 1)
+            meta_indexes = set(item.composite_dict + (item.unique,) for item in composite_indexes)
 
-        # Create composite index
-        # indexes = [(field_name, index) for field_name, index in composite_index.composite_dict.items()]
-        # await collection.create_index(indexes, unique=unique)
+            # Find indexes in MongoDB that are not in Meta - delete them
+            indexes_for_delete = mongo_indexes - meta_indexes
+
+            for index in indexes_for_delete:
+                find = list(filter(lambda elem: not isinstance(elem, bool), index))
+
+                for index_name, index_data in collection_indexes.items():
+                    if index_data.get('key') == find:
+                        # Remove index
+                        await collection.drop_index(index_name)
+                        print('removed')
+
+            # Find Meta Indexes missing in MongoDB - create them
+            indexes_for_create = meta_indexes - mongo_indexes
+
+            for index in indexes_for_create:
+                # Create composite index
+                unique = list(filter(lambda elem: isinstance(elem, bool), index))[0]
+                index = list(filter(lambda elem: not isinstance(elem, bool), index))
+                await collection.create_index(index, unique=unique)
+                print('created')
 
 
 class Inspector:
@@ -164,6 +172,14 @@ class Inspector:
 
                 if param_inspector:
                     await param_inspector().process(model, field_instance)
+
+
+# Get collection info (validators)
+# collection_info = await database.eval(
+#     'db.getCollectionInfos({data})'.format(
+#         data=json.dumps({'name': collection.name})
+#     )
+# )
 
 
 # https://habrahabr.ru/post/192870/#1

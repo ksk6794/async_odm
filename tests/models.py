@@ -9,7 +9,7 @@ class Post(MongoModel):
     class Meta:
         collection_name = 'post'
         composite_indexes = (
-            CompositeIndex((('name', ASCENDING), ('author', DESCENDING)), unique=True),
+            CompositeIndex((('author', ASCENDING), ('name', DESCENDING)), unique=True),
             CompositeIndex((('author', DESCENDING), ('published', ASCENDING)), unique=True)
         )
 
