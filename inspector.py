@@ -11,7 +11,7 @@ from core.base import MongoModel
 from core.index import Index
 
 
-class BaseIndexInspector:
+class BaseInspector:
     @staticmethod
     async def get_collection(model):
         dispatcher = model.get_dispatcher()
@@ -29,79 +29,34 @@ class BaseIndexInspector:
         return indexes
 
 
-class FieldIndexInspector(BaseIndexInspector):
-    async def process(self, model, field_instance):
-        collection = await self.get_collection(model)
+class IndexInspector(BaseInspector):
+    @staticmethod
+    def get_model_indexes(model):
+        # Get indexes from Meta
+        meta_data = getattr(model, 'Meta', None)
+        meta_indexes = list(getattr(meta_data, 'indexes', ()))
 
-        unique = getattr(field_instance, 'unique', False)
-        index = getattr(field_instance, 'index', None)
-        index = ASCENDING if unique and not index else index
-        field_name = field_instance.get_field_name()
+        # Get indexes from fields
+        field_indexes = []
 
-        # Get collection Indexes
-        collection_indexes = await self.get_indexes(collection)
+        for field_name, field_instance in model.get_declared_fields().items():
+            unique = getattr(field_instance, 'unique', False)
+            index = getattr(field_instance, 'index', None)
 
-        cur_index_name = None
-        cur_index_type = None
-        cur_index_unique = None
+            if unique or index:
+                index = ASCENDING if unique and not index else index
+                field_index = Index(((field_name, index),), unique=unique)
+                field_indexes.append(field_index)
 
-        for index_name, index_data in collection_indexes.items():
-            index_key = index_data.get('key', {})
-            index_unique = index_data.get('unique', False)
+        return meta_indexes + field_indexes
 
-            # Compound indexes have several keys
-            is_composite = len(index_key) > 1
-            indexed_field = index_key[0][0]
-
-            if not is_composite and field_name == indexed_field and isinstance(index_unique, bool):
-                cur_index_name = index_name
-                cur_index_type = {k: v for k, v in index_key}.get(field_name)
-                cur_index_unique = index_unique
-                break
-
-        event = None
-
-        if index or unique:
-            if not cur_index_name:
-                # Create index
-                await collection.create_index([(field_name, index)], unique=unique)
-                event = 'created'
-            else:
-                if index != cur_index_type or unique != cur_index_unique:
-                    # Change index
-                    await collection.drop_index(cur_index_name)
-                    await collection.create_index([(field_name, index)], unique=unique)
-                    event = 'changed'
-
-        elif cur_index_name:
-            # Remove index
-            await collection.drop_index(cur_index_name)
-            event = 'removed'
-
-        # Log event
-        if event:
-            print('-------------------------------------------\n'
-                  'Index for field `{field_name}` was {event}!\n'
-                  'Index type: {index_type}\n'
-                  'Unique: {unique}\n'.
-                  format(
-                    event=event,
-                    field_name=field_name,
-                    index_type=index,
-                    unique=unique,
-                  ))
-
-
-class CompositeIndexInspector(BaseIndexInspector):
     async def process(self, model):
         collection = await self.get_collection(model)
-
-        meta_data = getattr(model, 'Meta', None)
-        indexes = getattr(meta_data, 'indexes', ())
         collection_indexes = await self.get_indexes(collection)
+        indexes = self.get_model_indexes(model)
 
         if isinstance(indexes, (tuple, list)):
-            mongo_indexes = set(tuple(item['key']) + (item.get('unique', False),) for item in collection_indexes.values() if len(item['key']) > 1)
+            mongo_indexes = set(tuple(item['key']) + (item.get('unique', False),) for name, item in collection_indexes.items() if name != '_id_')
             meta_indexes = set(item.composite_dict + (item.unique,) for item in indexes if isinstance(item, Index))
 
             # Find indexes in MongoDB that are not in Meta - delete them
@@ -129,10 +84,6 @@ class CompositeIndexInspector(BaseIndexInspector):
 
 class Inspector:
     BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-    PARAMS_INSPECTORS = {
-        'unique': FieldIndexInspector,
-        'index': FieldIndexInspector,
-    }
 
     @staticmethod
     def is_odm_model(obj):
@@ -159,17 +110,7 @@ class Inspector:
 
     async def process_models(self):
         for model in self.get_odm_models():
-            await self.process_model(model)
-
-    async def process_model(self, model):
-        await CompositeIndexInspector().process(model)
-
-        for field_name, field_instance in model.get_declared_fields().items():
-            for param_name in field_instance.kwargs:
-                param_inspector = self.PARAMS_INSPECTORS.get(param_name)
-
-                if param_inspector:
-                    await param_inspector().process(model, field_instance)
+            await IndexInspector().process(model)
 
 
 # Get collection info (validators)
