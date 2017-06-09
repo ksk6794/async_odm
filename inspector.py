@@ -39,6 +39,7 @@ class IndexInspector(BaseInspector):
         # Get indexes from fields
         field_indexes = []
 
+        # Find and convert indexes from field attributes to Index instance
         for field_name, field_instance in model.get_declared_fields().items():
             unique = getattr(field_instance, 'unique', False)
             index = getattr(field_instance, 'index', None)
@@ -48,6 +49,7 @@ class IndexInspector(BaseInspector):
                 field_index = Index(((field_name, index),), unique=unique)
                 field_indexes.append(field_index)
 
+        # Join meta and field indexes
         return meta_indexes + field_indexes
 
     async def process(self, model):
@@ -55,12 +57,21 @@ class IndexInspector(BaseInspector):
         collection_indexes = await self.get_indexes(collection)
         indexes = self.get_model_indexes(model)
 
-        if isinstance(indexes, (tuple, list)):
-            mongo_indexes = set(tuple(item['key']) + (item.get('unique', False),) for name, item in collection_indexes.items() if name != '_id_')
-            meta_indexes = set(item.composite_dict + (item.unique,) for item in indexes if isinstance(item, Index))
+        if indexes and isinstance(indexes, (tuple, list)):
+            mongo_indexes = set(
+                tuple(item['key']) + (item.get('unique', False),)
+                for name, item in collection_indexes.items()
+                # Do not analyze the default _id index
+                if name != '_id_'
+            )
+            model_indexes = set(
+                item.composite_dict + (item.unique,)
+                for item in indexes
+                if isinstance(item, Index)
+            )
 
             # Find indexes in MongoDB that are not in Meta - delete them
-            indexes_for_delete = mongo_indexes - meta_indexes
+            indexes_for_delete = mongo_indexes - model_indexes
 
             for index in indexes_for_delete:
                 find = list(filter(lambda elem: not isinstance(elem, bool), index))
@@ -72,7 +83,7 @@ class IndexInspector(BaseInspector):
                         print('removed')
 
             # Find Meta Indexes missing in MongoDB - create them
-            indexes_for_create = meta_indexes - mongo_indexes
+            indexes_for_create = model_indexes - mongo_indexes
 
             for index in indexes_for_create:
                 # Create composite index
@@ -80,6 +91,25 @@ class IndexInspector(BaseInspector):
                 index = list(filter(lambda elem: not isinstance(elem, bool), index))
                 await collection.create_index(index, unique=unique)
                 print('created')
+
+
+class ValidateInspector(BaseInspector):
+    async def process(self, model):
+        collection = await self.get_collection(model)
+        database = collection.database
+
+        collection_info = await database.eval(
+            'db.getCollectionInfos({data})'.format(
+                data=json.dumps({'name': collection.name})
+            )
+        )
+
+        # Find and convert indexes from field attributes to Index instance
+        for field_name, field_instance in model.get_declared_fields().items():
+            pass
+
+        # Join meta and field indexes
+        return None
 
 
 class Inspector:
@@ -111,6 +141,7 @@ class Inspector:
     async def process_models(self):
         for model in self.get_odm_models():
             await IndexInspector().process(model)
+            # await ValidateInspector().process(model)
 
 
 # Get collection info (validators)

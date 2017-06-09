@@ -112,7 +112,6 @@ class Field:
 
 class BoolField(Field):
     type = bool
-    kwargs = 'null', 'default'
 
     def __init__(self, null=True, default=None):
         self.null, self.default = null, default
@@ -120,7 +119,6 @@ class BoolField(Field):
 
 class StringField(Field):
     type = str
-    kwargs = 'null', 'blank', 'length', 'unique', 'index', 'default'
 
     def __init__(self, null=True, blank=True, length=None, unique=False, index=None, default=None):
         self.null, self.blank, self.length, self.unique, self.index, self.default = null, blank, length, unique, index, default
@@ -128,7 +126,6 @@ class StringField(Field):
 
 class IntegerField(Field):
     type = int
-    kwargs = 'null', 'unique', 'default'
 
     def __init__(self, null=True, unique=False, default=None):
         self.null, self.unique, self.default = null, unique, default
@@ -136,7 +133,6 @@ class IntegerField(Field):
 
 class FloatField(Field):
     type = float
-    kwargs = 'null', 'unique', 'default'
 
     def __init__(self, null=True, unique=False, default=None):
         self.null, self.unique, self.default = null, unique, default
@@ -144,7 +140,6 @@ class FloatField(Field):
 
 class ListField(Field):
     type = list
-    kwargs = 'null', 'length', 'unique', 'default'
 
     def __init__(self, null=True, length=None, unique=False, default=None):
         self.null, self.length, self.unique, self.default = null, length, unique, default
@@ -156,7 +151,6 @@ class ListField(Field):
 
 class DictField(Field):
     type = dict
-    kwargs = 'null', 'unique', 'length', 'default'
 
     def __init__(self, null=True, unique=False, length=None, default=None):
         self.null, self.unique, self.length, self.default = null, unique, length, default
@@ -168,7 +162,6 @@ class DictField(Field):
 
 class DateTimeField(Field):
     type = datetime
-    kwargs = 'null',
 
     def __init__(self, null=True):
         self.null = null
@@ -230,8 +223,6 @@ class _ForeignKeyBackward(BaseBackwardRelationField):
 
 
 class _OneToOneBackward(BaseBackwardRelationField):
-    kwargs = ()
-
     def _get_query(self):
         if not self._query:
             filter_kwargs = {self._name: self._value}
@@ -241,7 +232,6 @@ class _OneToOneBackward(BaseBackwardRelationField):
 
 
 class ForeignKey(BaseRelationField):
-    kwargs = ()
     backward_class = _ForeignKeyBackward
 
     def _get_query(self):
@@ -253,7 +243,6 @@ class ForeignKey(BaseRelationField):
 
 
 class OneToOne(BaseRelationField):
-    kwargs = 'unique',
     backward_class = _OneToOneBackward
 
     def __init__(self, *args, **kwargs):

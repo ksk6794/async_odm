@@ -9,7 +9,7 @@ class Post(MongoModel):
     class Meta:
         collection_name = 'post'
         indexes = (
-            Index((('author', DESCENDING), ('name', ASCENDING)), unique=False),
+            Index((('author', DESCENDING), ('name', DESCENDING)), unique=False),
             Index((('author', DESCENDING), ('published', ASCENDING)), unique=True)
         )
 
@@ -30,7 +30,7 @@ class Name(MongoModel):
     class Meta:
         collection_name = 'name_collection'
 
-    name = StringField(unique=True, index=ASCENDING, default=uuid4)
+    name = StringField(unique=True, index=DESCENDING, default=uuid4)
 
     @staticmethod
     def validate_name(value):
