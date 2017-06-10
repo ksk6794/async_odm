@@ -68,6 +68,14 @@ class QuerySet:
         result = await self.model.get_dispatcher().count(**self._find)
         return result
 
+    async def create(self, **kwargs):
+        # TODO: Implement create method
+        pass
+
+    async def bulk_create(self, *args):
+        # TODO: Implement bulk create method
+        pass
+
     def _to_query(self, invert=False, **kwargs):
         """
         Convert a Q-parameters into a format that is accessible to the mongodb.

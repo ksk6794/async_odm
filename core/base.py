@@ -296,16 +296,6 @@ class MongoModel(metaclass=BaseModel):
         document = await self._update() if self._id else await self._create()
         self.__dict__.update(document)
 
-    @classmethod
-    async def create(cls, **kwargs):
-        # TODO: Implement create method
-        pass
-
-    @classmethod
-    async def bulk_create(cls, *args):
-        # TODO: Implement bulk create method
-        pass
-
     async def delete(self):
         await self._dispatcher.delete_one(self._id)
 
