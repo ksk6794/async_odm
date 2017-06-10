@@ -58,7 +58,7 @@ class MongoDispatcher:
     async def find(self, **kwargs):
         collection = await self.get_collection()
 
-        # TODO: Move check and processing to DocumentsManager
+        # TODO: Move check and processing to QuerySet
         available_params = {
             'filter': dict,
             'sort': list,
@@ -79,11 +79,9 @@ class MongoDispatcher:
     async def delete_one(self, _id):
         collection = await self.get_collection()
         result = await collection.delete_one(filter={'_id': _id})
-
         return result
 
     async def delete_many(self, **kwargs):
         collection = await self.get_collection()
         result = await collection.delete_many(filter=kwargs)
-
         return result

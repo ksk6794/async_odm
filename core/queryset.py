@@ -8,6 +8,8 @@ class QuerySet:
     model = None
 
     def __init__(self, **kwargs):
+        self.query = {}
+
         # TODO: aggregate
         self._all = False
         self._find = {}
@@ -49,14 +51,12 @@ class QuerySet:
             q_items = [arg for arg in args if isinstance(arg, QNode)]
             query = functools.reduce((lambda q_cur, q_next: q_cur & q_next), q_items)
             update(self._find, query.to_query(self))
-
         return self
 
     # TODO: Test it!
     def raw_query(self, raw_query):
         if isinstance(raw_query, dict):
             update(self._find, raw_query)
-
         return self
 
     # TODO: Test it!

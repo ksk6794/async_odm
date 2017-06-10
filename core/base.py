@@ -214,6 +214,7 @@ class MongoModel(metaclass=BaseModel):
     _declared_fields = None
 
     def __init__(self, **document):
+        # Fields that were set in the model instance, but not declared.
         self._undeclared_fields = {}
         self._modified_fields = []
 
@@ -234,6 +235,7 @@ class MongoModel(metaclass=BaseModel):
         )
 
     def __setattr__(self, key, value):
+        # Ignore private properties
         if not key.startswith('_'):
             if key not in self._declared_fields:
                 self._undeclared_fields[key] = value
@@ -258,7 +260,7 @@ class MongoModel(metaclass=BaseModel):
 
     @classproperty
     def objects(cls):
-        return QuerySet(model=cls, query={})
+        return QuerySet(model=cls)
 
     @classmethod
     def get_declared_fields(cls):
@@ -293,7 +295,8 @@ class MongoModel(metaclass=BaseModel):
     async def delete(self):
         await self._dispatcher.delete_one(self._id)
 
-    def get_object_id(self):
+    @property
+    def id(self):
         return self._id
 
     def _process_relation_field(self, field_name, field_instance):
