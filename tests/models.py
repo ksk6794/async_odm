@@ -8,10 +8,10 @@ from core.index import Index
 class Post(MongoModel):
     class Meta:
         collection_name = 'post'
-        indexes = (
-            Index((('author', DESCENDING), ('name', DESCENDING)), unique=False),
-            Index((('author', DESCENDING), ('published', ASCENDING)), unique=True)
-        )
+        # indexes = (
+        #     Index((('author', DESCENDING), ('name', DESCENDING)), unique=False),
+        #     Index((('author', DESCENDING), ('published', ASCENDING)), unique=True)
+        # )
 
     title = StringField()
     author = ForeignKey('Author', related_name='posts', null=False)

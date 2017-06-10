@@ -4,7 +4,7 @@ from .node import Q, QNode
 from pymongo import DESCENDING, ASCENDING
 
 
-class DocumentsManager:
+class QuerySet:
     model = None
 
     def __init__(self, **kwargs):

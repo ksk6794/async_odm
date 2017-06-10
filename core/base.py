@@ -5,7 +5,7 @@ import importlib
 from bson import DBRef
 from .utils import classproperty
 from collections import namedtuple
-from .manager import DocumentsManager
+from .queryset import QuerySet
 from .dispatchers import MongoDispatcher
 from core.connection import MongoConnection
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
@@ -212,11 +212,19 @@ class MongoModel(metaclass=BaseModel):
     _dispatcher = None
     _collection_name = None
     _declared_fields = None
-    _modified_fields = []
 
     def __init__(self, **document):
+        self._undeclared_fields = {}
+        self._modified_fields = []
+
+        # Save fields not declared in the model.
+        for field_name, field_value in document.items():
+            if field_name not in self.get_declared_fields() and field_name != '_id':
+                self._undeclared_fields[field_name] = field_value
+
         if '_id' in document:
             document = self._to_external_values(document)
+
         self.__dict__.update(document)
 
     def __repr__(self):
@@ -226,7 +234,11 @@ class MongoModel(metaclass=BaseModel):
         )
 
     def __setattr__(self, key, value):
-        self._modified_fields.append(key)
+        if not key.startswith('_'):
+            if key not in self._declared_fields:
+                self._undeclared_fields[key] = value
+            self._modified_fields.append(key)
+        super().__setattr__(key, value)
 
     def __getattribute__(self, item):
         attr = super().__getattribute__(item)
@@ -246,7 +258,7 @@ class MongoModel(metaclass=BaseModel):
 
     @classproperty
     def objects(cls):
-        return DocumentsManager(model=cls, query={})
+        return QuerySet(model=cls, query={})
 
     @classmethod
     def get_declared_fields(cls):
@@ -318,8 +330,15 @@ class MongoModel(metaclass=BaseModel):
         :return: dict
         """
         field_values = await self._to_internal_values()
-        document = await self._dispatcher.create(**field_values)
-        document = self._to_external_values(document)
+        undeclared = self._undeclared_fields
+        field_values.update(undeclared)
+
+        insert_result = await self._dispatcher.create(**field_values)
+
+        # Generate document from field_values and inserted_id
+        field_values.update({'_id': insert_result.inserted_id})
+        document = self._to_external_values(field_values)
+
         return document
 
     async def _update(self):
@@ -328,9 +347,16 @@ class MongoModel(metaclass=BaseModel):
         :return: dict
         """
         field_values = await self._to_internal_values()
+        undeclared = self._undeclared_fields
+        field_values.update(undeclared)
+
         modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
         document = await self._dispatcher.update(self._id, **modified)
+
+        # Update the document with new field values
+        document.update(modified)
         document = self._to_external_values(document)
+
         return document
 
     def _to_external_values(self, document):

@@ -20,21 +20,24 @@ class MongoDispatcher:
         return collection
 
     async def create(self, **kwargs):
-        document = kwargs
+        """
+        Insert document.
+        :param kwargs: dict (Fields to update)
+        :return: InsertOneResult (object with inserted_id)
+        """
         collection = await self.get_collection()
-        insert_result = await collection.insert_one(document)
-
-        document = None
-
-        if insert_result:
-            document = await self.get(_id=insert_result.inserted_id)
-
-        return document
+        insert_result = await collection.insert_one(kwargs)
+        return insert_result
 
     async def update(self, _id, **kwargs):
+        """
+        Find and modify by `_id`.
+        :param _id: ObjectId
+        :param kwargs: dict (Fields to update)
+        :return: dict (Document before the changes)
+        """
         collection = await self.get_collection()
         document = await collection.find_and_modify(query={'_id': _id}, update=kwargs)
-
         return document
 
     async def get(self, **kwargs):
@@ -70,9 +73,6 @@ class MongoDispatcher:
                 params[param_name] = param_value
 
         cursor = collection.find(**params)
-
-        # async for document in cursor:
-        #     documents.append(document)
 
         return cursor
 

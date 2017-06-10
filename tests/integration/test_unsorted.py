@@ -39,8 +39,9 @@ class IntegrationTests(BaseAsyncTestCase):
     async def test_update_unique_field(self):
         exception = False
         name = Name(name='test')
+
         await name.save()
-        name.name = 'test'
+        name.name = 'test2'
 
         try:
             await name.save()
