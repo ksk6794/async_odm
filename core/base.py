@@ -274,6 +274,10 @@ class MongoModel(metaclass=BaseModel):
     def get_collection_name(cls):
         return cls._collection_name
 
+    @property
+    def id(self):
+        return self._id
+
     async def save(self):
         for field_name, field_instance in self.get_declared_fields().items():
 
@@ -292,19 +296,25 @@ class MongoModel(metaclass=BaseModel):
         document = await self._update() if self._id else await self._create()
         self.__dict__.update(document)
 
+    @classmethod
+    async def create(cls, **kwargs):
+        # TODO: Implement create method
+        pass
+
+    @classmethod
+    async def bulk_create(cls, *args):
+        # TODO: Implement bulk create method
+        pass
+
     async def delete(self):
         await self._dispatcher.delete_one(self._id)
-
-    @property
-    def id(self):
-        return self._id
 
     def _process_relation_field(self, field_name, field_instance):
         # TODO: Check if the object exists in the database
         field_value = self.__dict__.get(field_name)
 
         # Set the DBRef for the field value (create) or leave the same (update)
-        # TODO: Can't get collection_name of None if relation class is a string.
+        # TODO: Can't get collection_name of None if relation class is a string
         collection_name = field_instance.relation.get_collection_name()
         document_id = getattr(field_value, '_id', field_value)
         field_value = DBRef(collection_name, document_id)
