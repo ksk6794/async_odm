@@ -177,7 +177,7 @@ class BaseRelationField(Field):
     def __init__(self, relation, related_name=None, null=True):
         self.relation, self.related_name, self.null = relation, related_name, null
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
 
     # TODO: Test it!
@@ -199,7 +199,7 @@ class BaseBackwardRelationField(Field):
     def __init__(self, relation):
         self.relation = relation
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
 
     async def __anext__(self):

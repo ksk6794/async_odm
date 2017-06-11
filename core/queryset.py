@@ -128,7 +128,7 @@ class QuerySet:
     async def _to_list(self):
         return [self._to_object(document) async for document in await self.cursor]
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
 
     # TODO: Test it!

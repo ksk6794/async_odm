@@ -1,3 +1,5 @@
+from pymongo import ReturnDocument
+
 from .exceptions import DoesNotExist, MultipleObjectsReturned
 
 
@@ -37,7 +39,9 @@ class MongoDispatcher:
         :return: dict (Document before the changes)
         """
         collection = await self.get_collection()
-        document = await collection.find_and_modify(query={'_id': _id}, update=kwargs)
+        document = await collection.find_one_and_update(filter={'_id': _id},
+                                                        update={'$set': kwargs},
+                                                        return_document=ReturnDocument.AFTER)
         return document
 
     async def get(self, **kwargs):
