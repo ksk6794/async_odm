@@ -1,6 +1,6 @@
 import functools
 from .utils import update
-from .node import Q, QNode
+from .node import Q, QNode, QNot, QCombination
 from pymongo import DESCENDING, ASCENDING
 
 
@@ -29,12 +29,12 @@ class QuerySet:
         odm_object = self._to_object(result)
         return odm_object
 
-    def filter(self, **kwargs):
-        self._find = update(self._find, self._to_query(**kwargs))
+    def filter(self, *args, **kwargs):
+        self._find = update(self._find, self._to_query(*args, **kwargs))
         return self
 
-    def exclude(self, **kwargs):
-        self._find = update(self._find, self._to_query(invert=True, **kwargs))
+    def exclude(self, *args, **kwargs):
+        self._find = update(self._find, self._to_query(*args, invert=True, **kwargs))
         return self
 
     def sort(self, *args):
@@ -46,12 +46,12 @@ class QuerySet:
 
         return self
 
-    def q_query(self, *args):
-        if args:
-            q_items = [arg for arg in args if isinstance(arg, QNode)]
-            query = functools.reduce((lambda q_cur, q_next: q_cur & q_next), q_items)
-            update(self._find, query.to_query(self))
-        return self
+    # def q_query(self, *args):
+    #     if args:
+    #         q_items = [arg for arg in args if isinstance(arg, QNode)]
+    #         query = functools.reduce((lambda q_cur, q_next: q_cur & q_next), q_items)
+    #         update(self._find, query.to_query(self))
+    #     return self
 
     # TODO: Test it!
     def raw_query(self, raw_query):
@@ -76,7 +76,7 @@ class QuerySet:
         # TODO: Implement bulk create method
         pass
 
-    def _to_query(self, invert=False, **kwargs):
+    def _to_query(self, *args, invert=False, **kwargs):
         """
         Convert a Q-parameters into a format that is accessible to the mongodb.
         :param invert: bool
@@ -85,16 +85,36 @@ class QuerySet:
         """
         raw_query = {}
 
-        if kwargs:
-            # Convert named arguments to Q
-            q_items = (Q(**{field_name: field_value}) for field_name, field_value in kwargs.items())
-
-            # Combine Q-elements to single QCombination object via & operator
-            query = functools.reduce((lambda q_cur, q_next: q_cur & q_next), q_items)
+        if kwargs or args:
+            q_args = args[0] if len(args) == 1 and isinstance(args[0], QNode) else None
+            q_kwargs = Q(**kwargs)
 
             # Invert query (it's necessary for exclude-operation)
             if invert:
-                query = ~query
+                if q_args:
+                    # Convert negative expression inside exclude to positive.
+                    if isinstance(q_args, QCombination):
+
+                        # TODO: Walk recursive
+                        def func(q_args):
+                            for q in q_args.children:
+                                if isinstance(q, (Q, QNot)):
+                                    return q.query
+                                elif isinstance(q, QCombination):
+                                    pass
+
+                        # func = lambda q: q.query if isinstance(q, (Q, QNot)) else func(q) for q in q.children
+                        q_args.children = [func(q) for q in q_args.children]
+
+                    elif isinstance(q_args, QNot):
+                        q_args = q_args.query
+
+                if q_kwargs:
+                    # Invert Q from kwargs
+                    q_kwargs = ~q_kwargs
+
+            # Join conditions
+            query = q_kwargs & q_args if q_args else q_kwargs
 
             raw_query = query.to_query(self)
 

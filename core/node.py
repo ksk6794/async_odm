@@ -1,6 +1,6 @@
 import copy
-from .utils import update
-from .fields import BaseRelationField
+from core.utils import update
+from core.fields import BaseRelationField
 
 
 class QNodeVisitor(object):
