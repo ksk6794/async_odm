@@ -21,6 +21,26 @@ class QueryManagerTests(BaseAsyncTestCase):
 
         await name.delete()
 
+    async def test_create(self):
+        await Folder.objects.create(name='test')
+
+        name = await Folder.objects.get(name='test')
+        self.assertTrue(name._id)
+        self.assertEqual(name.name, 'test')
+
+        await name.delete()
+
+    async def test_bulk_create(self):
+        await Folder.objects.bulk_create(
+            Folder(name='test'),
+            Folder(name='test2'),
+            Folder(name='test3')
+        )
+
+        folders_count = await Folder.objects.count()
+        self.assertEqual(folders_count, 3)
+        await Folder.objects.delete()
+
     async def test_save_undeclared_field(self):
         folder = Folder(name='test', test='test')
         await folder.save()

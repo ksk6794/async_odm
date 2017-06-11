@@ -69,12 +69,18 @@ class QuerySet:
         return result
 
     async def create(self, **kwargs):
-        # TODO: Implement create method
-        pass
+        document = self.model(**kwargs)
+        await document.save()
+        return document
 
     async def bulk_create(self, *args):
         # TODO: Implement bulk create method
-        pass
+        for index, document in enumerate(args):
+            # TODO: Validate each document
+            # TODO: Wrap each document with InsertOne
+            # TODO: Use dispatcher's bulk_create
+            # http://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_collection.html
+            pass
 
     def _to_query(self, *args, invert=False, **kwargs):
         """
@@ -96,15 +102,15 @@ class QuerySet:
                     if isinstance(q_args, QCombination):
 
                         # TODO: Walk recursive
-                        def func(q_args):
-                            for q in q_args.children:
-                                if isinstance(q, (Q, QNot)):
-                                    return q.query
-                                elif isinstance(q, QCombination):
-                                    pass
+                        # def func(q_args):
+                        #     for q in q_args.children:
+                        #         if isinstance(q, (Q, QNot)):
+                        #             return q.query
+                        #         elif isinstance(q, QCombination):
+                        #             pass
 
-                        # func = lambda q: q.query if isinstance(q, (Q, QNot)) else func(q) for q in q.children
-                        q_args.children = [func(q) for q in q_args.children]
+                        # func = lambda q: q.query if isinstance(q, (Q, QNot)) else func(q)
+                        q_args.children = [q.query for q in q_args.children]
 
                     elif isinstance(q_args, QNot):
                         q_args = q_args.query
