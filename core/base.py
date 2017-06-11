@@ -355,9 +355,6 @@ class MongoModel(metaclass=BaseModel):
 
         modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
         document = await self._dispatcher.update(self._id, **modified)
-
-        # Update the document with new field values
-        document.update(modified)
         document = self._to_external_values(document)
 
         return document
