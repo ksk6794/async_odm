@@ -1,7 +1,6 @@
-import functools
 from .utils import update
 from .node import Q, QNode, QNot, QCombination
-from pymongo import DESCENDING, ASCENDING
+from pymongo import DESCENDING, ASCENDING, InsertOne
 
 
 class QuerySet:
@@ -46,13 +45,6 @@ class QuerySet:
 
         return self
 
-    # def q_query(self, *args):
-    #     if args:
-    #         q_items = [arg for arg in args if isinstance(arg, QNode)]
-    #         query = functools.reduce((lambda q_cur, q_next: q_cur & q_next), q_items)
-    #         update(self._find, query.to_query(self))
-    #     return self
-
     # TODO: Test it!
     def raw_query(self, raw_query):
         if isinstance(raw_query, dict):
@@ -74,13 +66,21 @@ class QuerySet:
         return document
 
     async def bulk_create(self, *args):
-        # TODO: Implement bulk create method
+        documents = []
+
         for index, document in enumerate(args):
-            # TODO: Validate each document
-            # TODO: Wrap each document with InsertOne
-            # TODO: Use dispatcher's bulk_create
-            # http://motor.readthedocs.io/en/stable/api-asyncio/asyncio_motor_collection.html
-            pass
+            for field_name, field_instance in document.get_declared_fields().items():
+                # Validate each document
+                field_value = await document.prepare_for_write(field_name, field_instance)
+                document.set_field_value(field_name, field_value)
+
+            field_value = await document.get_field_value()
+
+            # Wrap each document with InsertOne
+            document = InsertOne(field_value)
+            documents.append(document)
+
+            await self.model.get_dispatcher().bulk_create(documents)
 
     def _to_query(self, *args, invert=False, **kwargs):
         """

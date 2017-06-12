@@ -279,25 +279,40 @@ class MongoModel(metaclass=BaseModel):
         return self._id
 
     async def save(self):
+        # Only declared fields are processed
         for field_name, field_instance in self.get_declared_fields().items():
-
-            # Save relation ObjectId
-            if isinstance(field_instance, BaseRelationField):
-                field_value = self._process_relation_field(field_name, field_instance)
-                self.__dict__[field_name] = field_value
-
-            # Call Model child (custom) validate methods
-            new_value = await self._child_validator(field_name)
-
-            # Set the post validate value
-            if new_value is not None:
-                self.__dict__[field_name] = new_value
+            self.__dict__[field_name] = await self.prepare_for_write(field_name, field_instance)
 
         document = await self._update() if self._id else await self._create()
         self.__dict__.update(document)
 
     async def delete(self):
         await self._dispatcher.delete_one(self._id)
+
+    def set_field_value(self, field_name, field_value):
+        self.__dict__[field_name] = field_value
+
+    async def prepare_for_write(self, field_name, field_instance):
+        field_value = self.__dict__.get(field_name)
+
+        # Replace to relation ObjectId
+        if isinstance(field_instance, BaseRelationField):
+            field_value = self._process_relation_field(field_name, field_instance)
+        else:
+            # Call Model child (custom) validate methods
+            new_value = await self._child_validator(field_name)
+
+            # Set the post validate value
+            if new_value is not None:
+                field_value = new_value
+
+        return field_value
+
+    async def get_field_value(self):
+        field_values = await self._to_internal_values()
+        undeclared = self._undeclared_fields
+        field_values.update(undeclared)
+        return field_values
 
     def _process_relation_field(self, field_name, field_instance):
         # TODO: Check if the object exists in the database
@@ -332,10 +347,7 @@ class MongoModel(metaclass=BaseModel):
         Create document with all defined fields.
         :return: dict
         """
-        field_values = await self._to_internal_values()
-        undeclared = self._undeclared_fields
-        field_values.update(undeclared)
-
+        field_values = await self.get_field_value()
         insert_result = await self._dispatcher.create(**field_values)
 
         # Generate document from field_values and inserted_id
@@ -349,10 +361,7 @@ class MongoModel(metaclass=BaseModel):
         Update only modified document fields.
         :return: dict
         """
-        field_values = await self._to_internal_values()
-        undeclared = self._undeclared_fields
-        field_values.update(undeclared)
-
+        field_values = await self.get_field_value()
         modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
         document = await self._dispatcher.update(self._id, **modified)
         document = self._to_external_values(document)

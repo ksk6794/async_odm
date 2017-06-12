@@ -31,9 +31,9 @@ class MongoDispatcher:
         insert_result = await collection.insert_one(kwargs)
         return insert_result
 
-    async def bulk_create(self, *args):
+    async def bulk_create(self, documents):
         collection = await self.get_collection()
-        results = await collection.bulk_write(args)
+        results = await collection.bulk_write(documents)
         return results
 
     async def update(self, _id, **kwargs):
