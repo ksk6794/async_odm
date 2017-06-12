@@ -24,8 +24,8 @@ class QConditionsTests(BaseAsyncTestCase):
         self.assertEqual(len(users), 1)
 
     async def test_exclude_invert_q_and_or(self):
-        users = await Profile.objects.exclude(~Q(age=30) & ~Q(username='Ivan') & Q(docs=[1, 2]))
-        self.assertEqual(len(users), 1)
+        users_count = await Profile.objects.exclude(~Q(age=30) & ~Q(username='Ivan') & Q(docs=[1, 2])).count()
+        self.assertEqual(users_count, 0)
 
     async def test_exclude_invert_q_single(self):
         users = await Profile.objects.exclude(~Q(age=30))
@@ -56,6 +56,6 @@ class QConditionsTests(BaseAsyncTestCase):
         self.assertIn(users[1].age, (20, 30))
 
     async def test_exclude_q_or_and(self):
-        users = await Profile.objects.exclude((Q(username='Ivan') | Q(username='Peter')) & Q(age__gte=20))
+        users = await Profile.objects.exclude((Q(username='Ivan') | Q(username='Peter')) & Q(age=20))
         self.assertEqual(len(users), 1)
-        self.assertIn(users[0].age, 18)
+        self.assertEqual(users[0].age, 18)

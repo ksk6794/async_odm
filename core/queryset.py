@@ -100,17 +100,20 @@ class QuerySet:
                 if q_args:
                     # Convert negative expression inside exclude to positive.
                     if isinstance(q_args, QCombination):
-
                         # TODO: Walk recursive
-                        # def func(q_args):
-                        #     for q in q_args.children:
-                        #         if isinstance(q, (Q, QNot)):
-                        #             return q.query
-                        #         elif isinstance(q, QCombination):
-                        #             pass
+                        children = []
+                        for q in q_args.children:
+                            if isinstance(q, Q):
+                                children.append(~q)
 
-                        # func = lambda q: q.query if isinstance(q, (Q, QNot)) else func(q)
-                        q_args.children = [q.query for q in q_args.children]
+                            elif isinstance(q, QNot):
+                                children.append(q.query)
+
+                            elif isinstance(q, QCombination):
+                                # TODO: Invert elements into QCombination
+                                children.append(q)
+
+                        q_args.children = children
 
                     elif isinstance(q_args, QNot):
                         q_args = q_args.query
