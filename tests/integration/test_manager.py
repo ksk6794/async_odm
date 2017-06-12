@@ -37,8 +37,11 @@ class QueryManagerTests(BaseAsyncTestCase):
             Folder(name='test3')
         )
 
-        folders_count = await Folder.objects.count()
-        self.assertEqual(folders_count, 3)
+        folders = await Folder.objects.all()
+        self.assertEqual(len(folders), 3)
+        self.assertEqual(folders[0].name, 'test')
+        self.assertEqual(folders[1].name, 'test2')
+        self.assertEqual(folders[2].name, 'test3')
         await Folder.objects.delete()
 
     async def test_save_undeclared_field(self):

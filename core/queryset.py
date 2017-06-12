@@ -80,7 +80,7 @@ class QuerySet:
             document = InsertOne(field_value)
             documents.append(document)
 
-            await self.model.get_dispatcher().bulk_create(documents)
+        await self.model.get_dispatcher().bulk_create(documents)
 
     def _to_query(self, *args, invert=False, **kwargs):
         """
