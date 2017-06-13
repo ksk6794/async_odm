@@ -351,7 +351,8 @@ class MongoModel(metaclass=BaseModel):
             if isinstance(field_instance, Field):
                 field_value = field_instance.to_external_value(field_value)
 
-            document.update({field_name: field_value})
+                # Update document with an external value
+                document.update({field_name: field_value})
 
         return document
 
