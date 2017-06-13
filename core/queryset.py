@@ -69,12 +69,7 @@ class QuerySet:
         documents = []
 
         for index, document in enumerate(args):
-            for field_name, field_instance in document.get_declared_fields().items():
-                # Validate each document
-                field_value = await document.prepare_for_write(field_name, field_instance)
-                document.set_field_value(field_name, field_value)
-
-            field_value = await document.get_field_value()
+            field_value = await document.get_internal_values()
 
             # Wrap each document with InsertOne
             document = InsertOne(field_value)

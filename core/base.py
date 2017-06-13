@@ -224,7 +224,7 @@ class MongoModel(metaclass=BaseModel):
                 self._undeclared_fields[field_name] = field_value
 
         if '_id' in document:
-            document = self._to_external_values(document)
+            document = self.get_external_values(document)
 
         self.__dict__.update(document)
 
@@ -279,10 +279,6 @@ class MongoModel(metaclass=BaseModel):
         return self._id
 
     async def save(self):
-        # Only declared fields are processed
-        for field_name, field_instance in self.get_declared_fields().items():
-            self.__dict__[field_name] = await self.prepare_for_write(field_name, field_instance)
-
         document = await self._update() if self._id else await self._create()
         self.__dict__.update(document)
 
@@ -291,28 +287,6 @@ class MongoModel(metaclass=BaseModel):
 
     def set_field_value(self, field_name, field_value):
         self.__dict__[field_name] = field_value
-
-    async def prepare_for_write(self, field_name, field_instance):
-        field_value = self.__dict__.get(field_name)
-
-        # Replace to relation ObjectId
-        if isinstance(field_instance, BaseRelationField):
-            field_value = self._process_relation_field(field_name, field_instance)
-        else:
-            # Call Model child (custom) validate methods
-            new_value = await self._child_validator(field_name)
-
-            # Set the post validate value
-            if new_value is not None:
-                field_value = new_value
-
-        return field_value
-
-    async def get_field_value(self):
-        field_values = await self._to_internal_values()
-        undeclared = self._undeclared_fields
-        field_values.update(undeclared)
-        return field_values
 
     def _process_relation_field(self, field_name, field_instance):
         # TODO: Check if the object exists in the database
@@ -347,12 +321,12 @@ class MongoModel(metaclass=BaseModel):
         Create document with all defined fields.
         :return: dict
         """
-        field_values = await self.get_field_value()
+        field_values = await self.get_internal_values()
         insert_result = await self._dispatcher.create(**field_values)
 
         # Generate document from field_values and inserted_id
         field_values.update({'_id': insert_result.inserted_id})
-        document = self._to_external_values(field_values)
+        document = self.get_external_values(field_values)
 
         return document
 
@@ -361,14 +335,14 @@ class MongoModel(metaclass=BaseModel):
         Update only modified document fields.
         :return: dict
         """
-        field_values = await self.get_field_value()
+        field_values = await self.get_internal_values()
         modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
         document = await self._dispatcher.update(self._id, **modified)
-        document = self._to_external_values(document)
+        document = self.get_external_values(document)
 
         return document
 
-    def _to_external_values(self, document):
+    def get_external_values(self, document):
         """
         Convert internal values to external for representation to user.
         :param document: dict
@@ -377,6 +351,7 @@ class MongoModel(metaclass=BaseModel):
         for field_name, field_value in document.copy().items():
             field_instance = self.get_declared_fields().get(field_name)
 
+            # Bring each field to an external value
             if isinstance(field_instance, Field):
                 field_value = field_instance.to_external_value(field_value)
 
@@ -384,24 +359,39 @@ class MongoModel(metaclass=BaseModel):
 
         return document
 
-    async def _to_internal_values(self):
+    async def get_internal_values(self):
         """
         Convert external values to internal for saving to a database.
         :return: dict
         """
-        field_values = {}
+        fields_values = {}
 
         for field_name, field_instance in self.get_declared_fields().items():
             field_value = self.__dict__.get(field_name)
             field_instance._value = field_value
 
-            if isinstance(field_instance, Field):
+            # Replace to relation ObjectId
+            if isinstance(field_instance, BaseRelationField):
+                field_value = self._process_relation_field(field_name, field_instance)
+
+            elif isinstance(field_instance, Field):
                 # Validate field value
                 field_value = await field_instance.validate()
+
+                # Call Model child (custom) validate methods
+                new_value = await self._child_validator(field_name)
+
+                # Set the post validate value
+                if new_value is not None:
+                    field_value = new_value
 
                 # Bring to the internal value
                 field_value = field_instance.to_internal_value(field_value)
 
-            field_values[field_name] = field_value
+            fields_values[field_name] = field_value
 
-        return field_values
+            # Undeclared fields are not validated
+            undeclared = self._undeclared_fields
+            fields_values.update(undeclared)
+
+        return fields_values
