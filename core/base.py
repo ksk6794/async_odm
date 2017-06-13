@@ -285,9 +285,6 @@ class MongoModel(metaclass=BaseModel):
     async def delete(self):
         await self._dispatcher.delete_one(self._id)
 
-    def set_field_value(self, field_name, field_value):
-        self.__dict__[field_name] = field_value
-
     def _process_relation_field(self, field_name, field_instance):
         # TODO: Check if the object exists in the database
         field_value = self.__dict__.get(field_name)
