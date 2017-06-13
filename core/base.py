@@ -126,7 +126,6 @@ class RelationManager:
         """
         Add the model to the list to implement the relations between another models.
         Model names can not be duplicated.
-        :param name: str - name of model
         :param model: MongoModel instance
         :return: void
         """
