@@ -90,8 +90,6 @@ class BaseModel(type):
         declared_fields = {}
 
         for field_name, field_instance in attrs.copy().items():
-            dispatcher = attrs.get('_dispatcher')
-
             if isinstance(field_instance, Field):
                 if '__' in field_name:
                     exception = 'You can not use `__` in the field name {field_name}'.format(
@@ -100,8 +98,7 @@ class BaseModel(type):
                     raise AttributeError(exception)
 
                 # Add dispatcher and field name to each field instance (for validation)
-                field_instance._dispatcher = dispatcher
-                field_instance._name = field_name
+                field_instance.set_field_name(field_name)
 
                 declared_fields[field_name] = field_instance
                 attrs.pop(field_name)
@@ -365,7 +362,7 @@ class MongoModel(metaclass=BaseModel):
 
         for field_name, field_instance in self.get_declared_fields().items():
             field_value = self.__dict__.get(field_name)
-            field_instance._value = field_value
+            field_instance.set_field_value(field_value)
 
             # Replace to relation ObjectId
             if isinstance(field_instance, BaseRelationField):
@@ -373,7 +370,7 @@ class MongoModel(metaclass=BaseModel):
 
             elif isinstance(field_instance, Field):
                 # Validate field value
-                field_value = await field_instance.validate()
+                field_value = field_instance.validate()
 
                 # Call Model child (custom) validate methods
                 new_value = await self._child_validator(field_name)

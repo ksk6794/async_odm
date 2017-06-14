@@ -7,9 +7,9 @@ class Field:
     Base class of any field.
     """
     type = None
-    _dispatcher = None
     _name = None
     _value = None
+    is_sub_field = False
     _reserved_attributes = {
         'null': bool,
         'blank': bool,
@@ -39,15 +39,23 @@ class Field:
     def __len__(self):
         return len(self._value)
 
+    def set_field_name(self, name):
+        self._name = name
+
+    def set_field_value(self, value):
+        self._value = value
+
     def get_field_name(self):
         return self._name
 
-    async def validate(self):
-        if self._dispatcher and self._name:
+    def validate(self):
+        if self._name:
             null = getattr(self, 'null', True) or True
             blank = getattr(self, 'blank', True) or True
             length = getattr(self, 'length', None)
             default = getattr(self, 'default', None)
+
+            sub_text = ' for each item'
 
             if default is not None and not self._value:
                 # If the `default` attribute is a callable object.
@@ -60,6 +68,9 @@ class Field:
                                     field_name=self._name,
                                     field_type=self.type.__name__
                                 )
+                    
+                    # TODO: Come up with something better.
+                    exception = exception + sub_text if self.is_sub_field else exception
                     raise TypeError(exception)
 
                 if length:
@@ -69,6 +80,7 @@ class Field:
                                 field_name=self._name,
                                 length=length
                             )
+                            exception = exception + sub_text if self.is_sub_field else exception
                             raise ValueError(exception)
                     else:
                         exception = 'Cannot count the length of the field `{field_name}`.' \
@@ -76,18 +88,21 @@ class Field:
                                         field_name=self._name,
                                         length=length
                                     )
+                        exception = exception + sub_text if self.is_sub_field else exception
                         raise ValueError(exception)
             else:
                 if null is False and self._value is None:
                     exception = 'Field `{field_name}` can not be null'.format(
                         field_name=self._name
                     )
+                    exception = exception + sub_text if self.is_sub_field else exception
                     raise ValueError(exception)
 
                 if blank is False and self._value == '':
                     exception = 'Field `{field_name}` can not be blank'.format(
                         field_name=self._name
                     )
+                    exception = exception + sub_text if self.is_sub_field else exception
                     raise ValueError(exception)
 
         return self._value
@@ -141,12 +156,24 @@ class FloatField(Field):
 class ListField(Field):
     type = list
 
-    def __init__(self, null=True, length=None, unique=False, default=None):
-        self.null, self.length, self.unique, self.default = null, length, unique, default
+    def __init__(self, item_field=None, null=True, length=None, unique=False, default=None):
+        self.item_field, self.null, self.length, self.unique, self.default = item_field, null, length, unique, default
 
     # For IDE tips
     def __iter__(self):
         return self
+
+    # TODO: Test it!
+    def validate(self):
+        value = super().validate()
+
+        if self.item_field:
+            self.item_field.is_sub_field = True
+            self.item_field.set_field_name(self.get_field_name())
+            self.item_field.set_field_value(value)
+            self.item_field.validate()
+
+        return value
 
 
 class DictField(Field):
