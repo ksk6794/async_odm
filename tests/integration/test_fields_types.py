@@ -9,6 +9,7 @@ class User(MongoModel):
     age = IntegerField()
     billing = FloatField()
     addresses = ListField()
+    list_subfield = ListField(StringField(length=3))
     data = DictField()
     registered = DateTimeField()
     is_active = BoolField()
@@ -95,6 +96,26 @@ class FieldsTypesTests(BaseAsyncTestCase):
         except Exception as e:
             exception = True
             self.assertTrue(isinstance(e, TypeError))
+
+        self.assertTrue(exception)
+
+    async def test_type_list_sub_field(self):
+        user = User(list_subfield=['abc'])
+        await user.save()
+
+        self.assertTrue(user._id)
+        self.assertEqual(user.list_subfield, ['abc'])
+        await user.delete()
+
+    async def test_type_list_sub_field_wrong(self):
+        user = User(list_subfield=['abcd'])
+        exception = False
+
+        try:
+            await user.save()
+        except Exception as e:
+            exception = True
+            self.assertTrue(isinstance(e, ValueError))
 
         self.assertTrue(exception)
 

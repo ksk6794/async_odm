@@ -167,11 +167,12 @@ class ListField(Field):
     def validate(self):
         value = super().validate()
 
-        if self.item_field:
-            self.item_field.is_sub_field = True
-            self.item_field.set_field_name(self.get_field_name())
-            self.item_field.set_field_value(value)
-            self.item_field.validate()
+        if value and self.item_field is not None:
+            for list_item in value:
+                self.item_field.is_sub_field = True
+                self.item_field.set_field_name(self.get_field_name())
+                self.item_field.set_field_value(list_item)
+                self.item_field.validate()
 
         return value
 

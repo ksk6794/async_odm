@@ -77,12 +77,33 @@ class QuerySet:
 
         await self.model.get_dispatcher().bulk_create(documents)
 
+    def _recursive_invert(self, q_item):
+        """
+        Recursive invert all items inside QCombination.
+        :param q_item: QCombination
+        :return: list
+        """
+        children = []
+
+        for q in q_item.children:
+            if isinstance(q, Q):
+                children.append(~q)
+
+            elif isinstance(q, QNot):
+                children.append(q.query)
+
+            elif isinstance(q, QCombination):
+                q.children = self._recursive_invert(q)
+                children.append(q)
+
+        return children
+
     def _to_query(self, *args, invert=False, **kwargs):
         """
         Convert a Q-parameters into a format that is accessible to the mongodb.
         :param invert: bool
         :param kwargs: dict - key is a field name of the model, value is a sought value
-        :return: dict - converted to MongoDB query format
+        :return: dict (converted to MongoDB query format)
         """
         raw_query = {}
 
@@ -90,32 +111,20 @@ class QuerySet:
             q_args = args[0] if len(args) == 1 and isinstance(args[0], QNode) else None
             q_kwargs = Q(**kwargs)
 
-            # Invert query (it's necessary for exclude-operation)
+            # Invert query (it's necessary for exclude operation)
             if invert:
                 if q_args:
-                    # Convert negative expression inside exclude to positive.
                     if isinstance(q_args, QCombination):
-                        # TODO: Walk recursive
-                        children = []
-                        for q in q_args.children:
-                            if isinstance(q, Q):
-                                children.append(~q)
-
-                            elif isinstance(q, QNot):
-                                children.append(q.query)
-
-                            elif isinstance(q, QCombination):
-                                # TODO: Invert elements into QCombination
-                                children.append(q)
-
-                        q_args.children = children
+                        q_args.children = self._recursive_invert(q_args)
 
                     elif isinstance(q_args, QNot):
                         q_args = q_args.query
 
+                    elif isinstance(q_args, Q):
+                        q_args = QNot(q_args)
+
                 if q_kwargs:
-                    # Invert Q from kwargs
-                    q_kwargs = ~q_kwargs
+                    q_kwargs = QNot(q_kwargs)
 
             # Join conditions
             query = q_kwargs & q_args if q_args else q_kwargs
@@ -128,13 +137,13 @@ class QuerySet:
         return self.model(**document)
 
     def __getitem__(self, item):
-        if not isinstance(item, slice):
+        if isinstance(item, slice):
+            self._skip = item.start
+            self._limit = item.stop
+        else:
             raise TypeError('\'{class_name}\' object does not support indexing'.format(
                 class_name=self.__class__.__name__)
             )
-
-        self._skip = item.start
-        self._limit = item.stop
 
         return self
 
