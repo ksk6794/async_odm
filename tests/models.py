@@ -9,7 +9,7 @@ class Post(MongoModel):
     class Meta:
         collection_name = 'post'
         # indexes = (
-        #     Index((('author', DESCENDING), ('name', DESCENDING)), unique=False),
+        #     Index((('name', DESCENDING), ('author', DESCENDING)), unique=False),
         #     Index((('author', DESCENDING), ('published', ASCENDING)), unique=True)
         # )
 

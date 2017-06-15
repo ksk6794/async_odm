@@ -25,6 +25,7 @@ class BaseModel(type):
             attrs['_collection_name'] = mcs._get_collection_name(name, attrs)
             attrs['_connection'] = mcs._get_connection(name, attrs)
             attrs['_dispatcher'] = mcs._get_dispatcher(attrs)
+            attrs['_sorting'] = mcs._get_sorting(attrs)
             attrs['_declared_fields'] = mcs._get_declared_fields(attrs)
 
         model = super().__new__(mcs, name, bases, attrs)
@@ -79,6 +80,11 @@ class BaseModel(type):
         connection = attrs.get('_connection')
         collection_name = attrs.get('_collection_name')
         return MongoDispatcher(connection, collection_name)
+
+    @classmethod
+    def _get_sorting(mcs, attrs):
+        meta = attrs.get('Meta')
+        return getattr(meta, 'sorting', ())
 
     @classmethod
     def _get_declared_fields(mcs, attrs):
@@ -208,6 +214,7 @@ class MongoModel(metaclass=BaseModel):
     _dispatcher = None
     _collection_name = None
     _declared_fields = None
+    _sorting = None
 
     def __init__(self, **document):
         # Fields that were set in the model instance, but not declared.
@@ -269,6 +276,10 @@ class MongoModel(metaclass=BaseModel):
     @classmethod
     def get_collection_name(cls):
         return cls._collection_name
+
+    @classmethod
+    def get_sorting(cls):
+        return cls._sorting
 
     @property
     def id(self):

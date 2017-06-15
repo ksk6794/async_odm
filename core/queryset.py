@@ -37,6 +37,9 @@ class QuerySet:
         return self
 
     def sort(self, *args):
+        # If not specified in queryset - take from meta
+        args = args if args else self.model.get_sorting()
+
         for arg in args:
             if isinstance(arg, str):
                 field_name = arg[1:] if arg.startswith('-') else arg
