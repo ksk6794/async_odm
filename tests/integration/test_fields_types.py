@@ -1,5 +1,6 @@
 from datetime import datetime
 from core.base import MongoModel
+from core.exceptions import ValidationError
 from tests.base import BaseAsyncTestCase
 from core.fields import StringField, IntegerField, ListField, DictField, FloatField, DateTimeField, BoolField
 
@@ -35,7 +36,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, TypeError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -55,7 +56,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, TypeError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -75,7 +76,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, TypeError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -95,7 +96,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, TypeError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -115,7 +116,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, ValueError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -135,7 +136,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, TypeError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -155,7 +156,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, TypeError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -167,7 +168,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
             await user.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, TypeError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 

@@ -1,3 +1,4 @@
+from core.exceptions import ValidationError
 from core.fields import StringField, BoolField
 from tests.base import BaseAsyncTestCase
 from core.base import MongoModel
@@ -26,7 +27,7 @@ class FieldsAttrsTests(BaseAsyncTestCase):
             await settings.save()
         except Exception as e:
             exception = True
-            self.assertTrue(isinstance(e, ValueError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 

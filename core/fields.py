@@ -1,6 +1,8 @@
 from datetime import datetime
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
+from core.exceptions import ValidationError
+
 
 class Field:
     """
@@ -55,8 +57,6 @@ class Field:
             length = getattr(self, 'length', None)
             default = getattr(self, 'default', None)
 
-            sub_text = ' for each item'
-
             if default is not None and not self._value:
                 # If the `default` attribute is a callable object.
                 self._value = default() if callable(default) else default
@@ -68,10 +68,7 @@ class Field:
                                     field_name=self._name,
                                     field_type=self.type.__name__
                                 )
-                    
-                    # TODO: Come up with something better.
-                    exception = exception + sub_text if self.is_sub_field else exception
-                    raise TypeError(exception)
+                    raise ValidationError(exception, self.is_sub_field)
 
                 if length:
                     if hasattr(self._value, '__len__'):
@@ -80,30 +77,26 @@ class Field:
                                 field_name=self._name,
                                 length=length
                             )
-                            exception = exception + sub_text if self.is_sub_field else exception
-                            raise ValueError(exception)
+                            raise ValidationError(exception, self.is_sub_field)
                     else:
                         exception = 'Cannot count the length of the field `{field_name}`.' \
                                     'Define the __len__ method'.format(
                                         field_name=self._name,
                                         length=length
                                     )
-                        exception = exception + sub_text if self.is_sub_field else exception
-                        raise ValueError(exception)
+                        raise ValidationError(exception, self.is_sub_field)
             else:
                 if null is False and self._value is None:
                     exception = 'Field `{field_name}` can not be null'.format(
                         field_name=self._name
                     )
-                    exception = exception + sub_text if self.is_sub_field else exception
-                    raise ValueError(exception)
+                    raise ValidationError(exception, self.is_sub_field)
 
                 if blank is False and self._value == '':
                     exception = 'Field `{field_name}` can not be blank'.format(
                         field_name=self._name
                     )
-                    exception = exception + sub_text if self.is_sub_field else exception
-                    raise ValueError(exception)
+                    raise ValidationError(exception, self.is_sub_field)
 
         return self._value
 
