@@ -1,5 +1,6 @@
 from datetime import datetime
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
+
 from core.exceptions import ValidationError
 
 
@@ -8,7 +9,6 @@ class Field:
     Base class of any field.
     """
     type = None
-    attrs = ()
     _name = None
     _value = None
     is_sub_field = False
@@ -20,19 +20,9 @@ class Field:
         'unique': bool,
     }
 
-    def __init__(self, **kwargs):
-        for kwarg in kwargs:
-            if kwarg not in self.attrs:
-                raise ValueError('Unknown attribute `{attr_name}`'.format(
-                    attr_name=kwarg
-                ))
-
-        self.__dict__.update(kwargs)
-
     def __setattr__(self, key, value):
         if key in self._reserved_attributes:
             required_type = self._reserved_attributes.get(key)
-
             available_indexes = (
                 ASCENDING,
                 DESCENDING,
@@ -42,6 +32,7 @@ class Field:
                 HASHED,
                 TEXT
             )
+
             if key == 'index' and value not in available_indexes:
                 raise ValueError('Wrong index type! Available indexes: '
                                  '1, -1, "2d", "geoHaystack", "2dsphere", "hashed", "text"')
@@ -109,6 +100,7 @@ class Field:
                                         field_name=self._name
                                     )
                         raise ValidationError(exception, self.is_sub_field)
+
             else:
                 if null is False and self._value is None:
                     exception = 'Field `{field_name}` can not be null'.format(
@@ -144,31 +136,51 @@ class Field:
 
 class BoolField(Field):
     type = bool
-    attrs = ('null', 'default')
+
+    def __init__(self, null=True, default=None):
+        self.null, self.default = null, default
 
 
 class StringField(Field):
     type = str
-    attrs = ('null', 'blank', 'min_length', 'max_length', 'unique', 'index', 'default')
+
+    def __init__(self, null=True, blank=True, min_length=None, max_length=None, unique=False, index=None, default=None):
+        self.null = null
+        self.blank = blank
+        self.min_length = min_length
+        self.max_length = max_length
+        self.unique = unique
+        self.index = index
+        self.default = default
 
 
 class IntegerField(Field):
     type = int
-    attrs = ('null', 'unique', 'default')
+
+    def __init__(self, null=True, unique=False, default=None):
+        self.null = null
+        self.unique = unique
+        self.default = default
 
 
 class FloatField(Field):
     type = float
-    attrs = ('null', 'unique', 'default')
+
+    def __init__(self, null=True, unique=False, default=None):
+        self.null = null
+        self.unique = unique
+        self.default = default
 
 
 class ListField(Field):
     type = list
-    attrs = ('null', 'min_length', 'max_length', 'unique', 'default')
 
-    def __init__(self, base_field=None, **kwargs):
+    def __init__(self, base_field=None, null=True, length=None, unique=False, default=None):
         self.base_field = base_field
-        super().__init__(**kwargs)
+        self.null = null
+        self.length = length
+        self.unique = unique
+        self.default = default
 
     # For IDE tips
     def __iter__(self):
@@ -189,7 +201,13 @@ class ListField(Field):
 
 class DictField(Field):
     type = dict
-    attrs = ('null', 'unique', 'min_length', 'max_length', 'default')
+
+    def __init__(self, null=True, unique=False, min_length=None, max_length=None, default=None):
+        self.null = null
+        self.unique = unique
+        self.min_length = min_length
+        self.max_length = max_length
+        self.default = default
 
     # For IDE tips
     def __iter__(self):
@@ -198,20 +216,22 @@ class DictField(Field):
 
 class DateTimeField(Field):
     type = datetime
-    attrs = ('null',)
+
+    def __init__(self, null=True):
+        self.null = null
 
 
 class BaseRelationField(Field):
-    attrs = ('null',)
     backward_class = None
     _query = None
 
     def _get_query(self):
         raise NotImplementedError
 
-    def __init__(self, relation, related_name=None, **kwargs):
-        self.relation, self.related_name = relation, related_name
-        super().__init__(**kwargs)
+    def __init__(self, relation, related_name=None, null=True):
+        self.relation = relation
+        self.related_name = related_name
+        self.nul = null
 
     def __aiter__(self):
         return self
@@ -227,15 +247,13 @@ class BaseRelationField(Field):
 
 
 class BaseBackwardRelationField(Field):
-    attrs = ()
     _query = None
 
     def _get_query(self):
         raise NotImplementedError
 
-    def __init__(self, relation, **kwargs):
+    def __init__(self, relation):
         self.relation = relation
-        super().__init__(**kwargs)
 
     def __aiter__(self):
         return self
