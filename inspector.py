@@ -1,11 +1,10 @@
 import os
 import glob
-import json
 import inspect
 import asyncio
 import importlib
-from pymongo import ASCENDING
 from pymongo.errors import OperationFailure
+from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
 from core.base import MongoModel
 from core.index import Index
@@ -55,6 +54,8 @@ class IndexInspector(BaseInspector):
     async def process(self, model):
         collection = await self.get_collection(model)
         collection_indexes = await self.get_indexes(collection)
+
+        # TODO: Validate index types
         indexes = self.get_model_indexes(model)
 
         if indexes and isinstance(indexes, (tuple, list)):
@@ -93,25 +94,6 @@ class IndexInspector(BaseInspector):
                 print('created')
 
 
-class ValidateInspector(BaseInspector):
-    async def process(self, model):
-        collection = await self.get_collection(model)
-        database = collection.database
-
-        collection_info = await database.eval(
-            'db.getCollectionInfos({data})'.format(
-                data=json.dumps({'name': collection.name})
-            )
-        )
-
-        # Find and convert indexes from field attributes to Index instance
-        for field_name, field_instance in model.get_declared_fields().items():
-            pass
-
-        # Join meta and field indexes
-        return None
-
-
 class Inspector:
     BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -141,19 +123,8 @@ class Inspector:
     async def process_models(self):
         for model in self.get_odm_models():
             await IndexInspector().process(model)
-            # await ValidateInspector().process(model)
 
 
-# Get collection info (validators)
-# collection_info = await database.eval(
-#     'db.getCollectionInfos({data})'.format(
-#         data=json.dumps({'name': collection.name})
-#     )
-# )
-
-
-# https://habrahabr.ru/post/192870/#1
-# https://www.compose.com/articles/document-validation-in-mongodb-by-example/
 async def main():
     await Inspector().process_models()
 

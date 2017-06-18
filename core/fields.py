@@ -1,6 +1,4 @@
 from datetime import datetime
-from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
-
 from core.exceptions import ValidationError
 
 
@@ -23,19 +21,6 @@ class Field:
     def __setattr__(self, key, value):
         if key in self._reserved_attributes:
             required_type = self._reserved_attributes.get(key)
-            available_indexes = (
-                ASCENDING,
-                DESCENDING,
-                GEO2D,
-                GEOHAYSTACK,
-                GEOSPHERE,
-                HASHED,
-                TEXT
-            )
-
-            if key == 'index' and value not in available_indexes:
-                raise ValueError('Wrong index type! Available indexes: '
-                                 '1, -1, "2d", "geoHaystack", "2dsphere", "hashed", "text"')
 
             if value is not None and not isinstance(value, required_type):
                 exception = 'Reserved attr `{attr_name}` has wrong type! ' \
