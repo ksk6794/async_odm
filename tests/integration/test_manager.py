@@ -101,10 +101,16 @@ class QueryManagerTests(BaseAsyncTestCase):
         names = await Folder.objects.filter(name='test')
         self.assertEqual(names, [])
 
-    async def test_defer(self):
-        folder = Folder(name='test')
-        await folder.save()
+    async def test_update(self):
+        await Folder.objects.bulk_create(
+            Folder(name='test'),
+            Folder(name='test'),
+            Folder(name='test')
+        )
+        cnt = await Folder.objects.filter(name='test').count()
 
-        folder = await Folder.objects.filter(name='test').defer('name')
-        self.assertEqual(getattr(folder, 'name', None), None)
-        await Folder.objects.filter(name='test').delete()
+        await Folder.objects.filter(name='test').update(name='updated')
+        folders = await Folder.objects.filter(name='updated')
+        self.assertEqual(len(folders), 3)
+        await Folder.objects.delete()
+

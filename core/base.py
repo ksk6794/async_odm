@@ -68,7 +68,19 @@ class BaseModel(type):
         :return: str - collection name
         """
         meta = attrs.get('Meta')
-        return getattr(meta, 'collection_name', None) or '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
+        collection_name = getattr(meta, 'collection_name', None) or '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
+
+        for model_name, model in RelationManager().get_models().items():
+            if collection_name in model.get_collection_name():
+                raise ValueError(
+                    'The collection name `{collection_name}` already used by `{model_name}` model. '
+                    'Please, specify collection_name manually.'.format(
+                        collection_name=collection_name,
+                        model_name=model_name
+                    )
+                )
+
+        return collection_name
 
     @classmethod
     def _get_dispatcher(mcs, attrs):
@@ -143,6 +155,9 @@ class RelationManager:
 
     def get_model(self, model_name):
         return self._models.get(model_name)
+
+    def get_models(self):
+        return self._models
 
     def _process_relations(self, model):
         for field_name, field_instance in model.get_declared_fields().items():
@@ -341,7 +356,7 @@ class MongoModel(metaclass=BaseModel):
         """
         field_values = await self.get_internal_values()
         modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
-        document = await self._dispatcher.update(self._id, **modified)
+        document = await self._dispatcher.update_one(self._id, **modified)
         document = self.get_external_values(document)
 
         return document

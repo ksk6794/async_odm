@@ -13,6 +13,7 @@ DATABASES = {
             'tests.integration.test_one_to_one.UserTest',
             'tests.integration.test_one_to_one.ProfileTest',
             'tests.integration.test_queryset_fields_defer_only.User',
+            'tests.integration.test_queryset_exclude.Profile',
         ]
     },
     'test_odm': {

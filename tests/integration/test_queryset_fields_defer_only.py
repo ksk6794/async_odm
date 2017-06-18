@@ -4,6 +4,9 @@ from tests.base import BaseAsyncTestCase
 
 
 class User(MongoModel):
+    class Meta:
+        collection_name = 'user_test_1'
+
     username = StringField()
     email = StringField()
     numbers = ListField()
@@ -14,6 +17,7 @@ class QuerysetFieldsDeferOnlyTests(BaseAsyncTestCase):
         self.username = 'Ivan'
         self.email = 'ivan@test.com'
         self.numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
         self.user = await User.objects.create(
             username=self.username,
             email=self.email,

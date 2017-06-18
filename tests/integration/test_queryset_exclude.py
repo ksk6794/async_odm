@@ -1,15 +1,23 @@
-from tests.integration.models import Profile
+from core.base import MongoModel
+from core.fields import StringField, IntegerField, ListField, DictField
 from tests.base import BaseAsyncTestCase
 
 
-class ExcludeConditionsTests(BaseAsyncTestCase):
+class Profile(MongoModel):
+    class Meta:
+        collection_name = 'test_profile'
+
+    username = StringField()
+    age = IntegerField()
+    docs = ListField()
+    data = DictField()
+
+
+class QuerySetExcludeTests(BaseAsyncTestCase):
     async def setUp(self):
-        self.user_1 = Profile(username='Ivan', age=30, docs=[1, 2])
-        self.user_2 = Profile(username='Peter', age=20, docs=[1, 2, 3, 4])
-        self.user_3 = Profile(username='Geoff', age=18, docs=[1, 2, 4])
-        await self.user_1.save()
-        await self.user_2.save()
-        await self.user_3.save()
+        self.user_1 = await Profile.objects.create(username='Ivan', age=30, docs=[1, 2])
+        self.user_2 = await Profile.objects.create(username='Peter', age=20, docs=[1, 2, 3, 4])
+        self.user_3 = await Profile.objects.create(username='Geoff', age=18, docs=[1, 2, 4])
 
     async def tearDown(self):
         await Profile.objects.all().delete()

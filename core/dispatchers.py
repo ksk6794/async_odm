@@ -33,7 +33,7 @@ class MongoDispatcher:
         results = await collection.bulk_write(documents)
         return results
 
-    async def update(self, _id, **kwargs):
+    async def update_one(self, _id, **kwargs):
         """
         Find and modify by `_id`.
         :param _id: ObjectId
@@ -47,6 +47,11 @@ class MongoDispatcher:
             return_document=ReturnDocument.AFTER
         )
         return document
+
+    async def update_many(self, find, **kwargs):
+        collection = await self.get_collection()
+        result = await collection.update_many(find, {'$set': kwargs})
+        return result
 
     async def get(self, projection, **kwargs):
         count = await self.count(**kwargs)

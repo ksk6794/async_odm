@@ -2,7 +2,7 @@ from tests.integration.models import Profile
 from tests.base import BaseAsyncTestCase
 
 
-class FilterConditionsTests(BaseAsyncTestCase):
+class QuerySetFilterTests(BaseAsyncTestCase):
     async def setUp(self):
         self.user_1 = Profile(username='Ivan', age=30, docs=[1, 2])
         self.user_2 = Profile(username='Peter', age=20, docs=[1, 2, 3, 4])

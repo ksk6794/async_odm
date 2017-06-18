@@ -68,6 +68,10 @@ class QuerySet:
         await document.save()
         return document
 
+    async def update(self, **kwargs):
+        result = await self.model.get_dispatcher().update_many(self._find, **kwargs)
+        return result
+
     def fields(self, **kwargs):
         available_operators = ('slice',)
 
