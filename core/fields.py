@@ -1,6 +1,5 @@
 from datetime import datetime
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
-
 from core.exceptions import ValidationError
 
 
@@ -9,21 +8,40 @@ class Field:
     Base class of any field.
     """
     type = None
+    attrs = ()
     _name = None
     _value = None
     is_sub_field = False
     _reserved_attributes = {
         'null': bool,
         'blank': bool,
-        'length': int,
+        'min_length': int,
+        'max_length': int,
         'unique': bool,
     }
+
+    def __init__(self, **kwargs):
+        for kwarg in kwargs:
+            if kwarg not in self.attrs:
+                raise ValueError('Unknown attribute `{attr_name}`'.format(
+                    attr_name=kwarg
+                ))
+
+        self.__dict__.update(kwargs)
 
     def __setattr__(self, key, value):
         if key in self._reserved_attributes:
             required_type = self._reserved_attributes.get(key)
 
-            available_indexes = (ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT)
+            available_indexes = (
+                ASCENDING,
+                DESCENDING,
+                GEO2D,
+                GEOHAYSTACK,
+                GEOSPHERE,
+                HASHED,
+                TEXT
+            )
             if key == 'index' and value not in available_indexes:
                 raise ValueError('Wrong index type! Available indexes: '
                                  '1, -1, "2d", "geoHaystack", "2dsphere", "hashed", "text"')
@@ -54,7 +72,8 @@ class Field:
         if self._name:
             null = getattr(self, 'null', True) or True
             blank = getattr(self, 'blank', True) or True
-            length = getattr(self, 'length', None)
+            min_length = getattr(self, 'min_length', None)
+            max_length = getattr(self, 'max_length', None)
             default = getattr(self, 'default', None)
 
             if default is not None and not self._value:
@@ -70,19 +89,24 @@ class Field:
                                 )
                     raise ValidationError(exception, self.is_sub_field)
 
-                if length:
+                if min_length or max_length:
                     if hasattr(self._value, '__len__'):
-                        if len(self._value) > length:
-                            exception = 'Field `{field_name}` exceeds the length {length}'.format(
+                        if max_length and len(self._value) > max_length:
+                            exception = 'Field `{field_name}` exceeds the max length {length}'.format(
                                 field_name=self._name,
-                                length=length
+                                length=max_length
+                            )
+                            raise ValidationError(exception, self.is_sub_field)
+                        elif min_length and len(self._value) < min_length:
+                            exception = 'Field `{field_name}` exceeds the min length {length}'.format(
+                                field_name=self._name,
+                                length=min_length
                             )
                             raise ValidationError(exception, self.is_sub_field)
                     else:
                         exception = 'Cannot count the length of the field `{field_name}`.' \
                                     'Define the __len__ method'.format(
-                                        field_name=self._name,
-                                        length=length
+                                        field_name=self._name
                                     )
                         raise ValidationError(exception, self.is_sub_field)
             else:
@@ -120,61 +144,52 @@ class Field:
 
 class BoolField(Field):
     type = bool
-
-    def __init__(self, null=True, default=None):
-        self.null, self.default = null, default
+    attrs = ('null', 'default')
 
 
 class StringField(Field):
     type = str
-
-    def __init__(self, null=True, blank=True, length=None, unique=False, index=None, default=None):
-        self.null, self.blank, self.length, self.unique, self.index, self.default = null, blank, length, unique, index, default
+    attrs = ('null', 'blank', 'min_length', 'max_length', 'unique', 'index', 'default')
 
 
 class IntegerField(Field):
     type = int
-
-    def __init__(self, null=True, unique=False, default=None):
-        self.null, self.unique, self.default = null, unique, default
+    attrs = ('null', 'unique', 'default')
 
 
 class FloatField(Field):
     type = float
-
-    def __init__(self, null=True, unique=False, default=None):
-        self.null, self.unique, self.default = null, unique, default
+    attrs = ('null', 'unique', 'default')
 
 
 class ListField(Field):
     type = list
+    attrs = ('null', 'min_length', 'max_length', 'unique', 'default')
 
-    def __init__(self, item_field=None, null=True, length=None, unique=False, default=None):
-        self.item_field, self.null, self.length, self.unique, self.default = item_field, null, length, unique, default
+    def __init__(self, base_field=None, **kwargs):
+        self.base_field = base_field
+        super().__init__(**kwargs)
 
     # For IDE tips
     def __iter__(self):
         return self
 
-    # TODO: Test it!
     def validate(self):
         value = super().validate()
 
-        if value and self.item_field is not None:
+        if value and self.base_field is not None:
             for list_item in value:
-                self.item_field.is_sub_field = True
-                self.item_field.set_field_name(self.get_field_name())
-                self.item_field.set_field_value(list_item)
-                self.item_field.validate()
+                self.base_field.is_sub_field = True
+                self.base_field.set_field_name(self.get_field_name())
+                self.base_field.set_field_value(list_item)
+                self.base_field.validate()
 
         return value
 
 
 class DictField(Field):
     type = dict
-
-    def __init__(self, null=True, unique=False, length=None, default=None):
-        self.null, self.unique, self.length, self.default = null, unique, length, default
+    attrs = ('null', 'unique', 'min_length', 'max_length', 'default')
 
     # For IDE tips
     def __iter__(self):
@@ -183,20 +198,20 @@ class DictField(Field):
 
 class DateTimeField(Field):
     type = datetime
-
-    def __init__(self, null=True):
-        self.null = null
+    attrs = ('null',)
 
 
 class BaseRelationField(Field):
+    attrs = ('null',)
     backward_class = None
     _query = None
 
     def _get_query(self):
         raise NotImplementedError
 
-    def __init__(self, relation, related_name=None, null=True):
-        self.relation, self.related_name, self.null = relation, related_name, null
+    def __init__(self, relation, related_name=None, **kwargs):
+        self.relation, self.related_name = relation, related_name
+        super().__init__(**kwargs)
 
     def __aiter__(self):
         return self
@@ -212,13 +227,15 @@ class BaseRelationField(Field):
 
 
 class BaseBackwardRelationField(Field):
+    attrs = ()
     _query = None
 
     def _get_query(self):
         raise NotImplementedError
 
-    def __init__(self, relation):
+    def __init__(self, relation, **kwargs):
         self.relation = relation
+        super().__init__(**kwargs)
 
     def __aiter__(self):
         return self
@@ -233,8 +250,6 @@ class BaseBackwardRelationField(Field):
 
 
 class _ForeignKeyBackward(BaseBackwardRelationField):
-    kwargs = ()
-
     def _get_query(self):
         if not self._query:
             filter_kwargs = {self._name: self._value}

@@ -5,7 +5,7 @@ from core.base import MongoModel
 
 
 class Settings(MongoModel):
-    param_1 = StringField(length=3)
+    param_1 = StringField(max_length=3)
     param_2 = StringField(unique=True)
     param_3 = StringField(blank=True)
     param_4 = StringField(default=lambda: 'test')

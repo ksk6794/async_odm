@@ -19,7 +19,7 @@ class Post(MongoModel):
 
 
 class Author(MongoModel):
-    username = StringField(length=10, null=True)
+    username = StringField(max_length=10, null=True)
     age = IntegerField(null=True)
     billing = FloatField(null=True)
     documents = ListField(null=True)
