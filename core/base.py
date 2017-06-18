@@ -34,11 +34,11 @@ class BaseModel(type):
         return model
 
     @classmethod
-    def _get_model_module(cls, name, attrs):
+    def _get_model_module(mcs, name, attrs):
         return '.'.join((attrs.get('__module__'), name))
 
     @classmethod
-    def _get_connection(mcs, name, attrs):
+    def _get_db_settings(mcs, name, attrs):
         model = mcs._get_model_module(name, attrs)
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
 
@@ -46,20 +46,26 @@ class BaseModel(type):
             raise ImportError('Specify an `ODM_SETTINGS_MODULE` variable in the environment.')
 
         settings = importlib.import_module(settings_module)
-        connection = None
+        db_name, db_settings = None, None
 
         for db_name, db_settings in settings.DATABASES.items():
             if model in db_settings.get('models'):
-                connection = MongoConnection(
-                    host=db_settings.get('host'),
-                    port=db_settings.get('port'),
-                    database=db_name
-                )
                 break
 
-        if not connection:
+        if not (db_name or db_settings):
             exception = 'There is no database configuration for the `{}` model'
             raise Exception(exception.format(model))
+
+        return db_name, db_settings
+
+    @classmethod
+    def _get_connection(mcs, name, attrs):
+        db_name, db_settings = mcs._get_db_settings(name, attrs)
+        connection = MongoConnection(
+            host=db_settings.get('host'),
+            port=db_settings.get('port'),
+            database=db_name
+        )
 
         return connection
 
@@ -78,9 +84,14 @@ class BaseModel(type):
             '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
         )
 
+        # Ensure that collection names do not match within the current database
+        db_name = mcs._get_connection(name, attrs).database
+
         for model_name, model in RelationManager().get_models().items():
-            if collection_name in model.get_collection_name():
-                # TODO: Check only for current database
+            reg_db_name = model.get_connection().database
+            reg_collection_name = model.get_collection_name()
+
+            if collection_name == reg_collection_name and db_name == reg_db_name:
                 raise ValueError(
                     'The collection name `{collection_name}` already used by `{model_name}` model. '
                     'Please, specify a unique collection_name manually for {cur_model}.'.format(
@@ -199,7 +210,7 @@ class RelationManager:
                     waited_relation = WaitedRelation(
                         field_name=field_name,
                         field_instance=field_instance,
-                        model_name='.'.join((model.__module__, model.__name__))
+                        model_name='.'.join([model.__module__, model.__name__])
                     )
                     self._waited_relations.append(waited_relation)
 
@@ -238,6 +249,7 @@ class MongoModel(metaclass=BaseModel):
     _id = None
     _dispatcher = None
     _collection_name = None
+    _connection = None
     _declared_fields = None
     _sorting = None
 
@@ -301,6 +313,10 @@ class MongoModel(metaclass=BaseModel):
     @classmethod
     def get_collection_name(cls):
         return cls._collection_name
+
+    @classmethod
+    def get_connection(cls):
+        return cls._connection
 
     @classmethod
     def get_sorting(cls):
