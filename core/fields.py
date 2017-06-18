@@ -12,7 +12,7 @@ class Field:
     is_sub_field = False
     _reserved_attributes = {
         'null': bool,
-        'blank': bool,
+        'required': bool,
         'min_length': int,
         'max_length': int,
         'unique': bool,
@@ -46,7 +46,7 @@ class Field:
 
     def validate(self):
         if self._name:
-            null = getattr(self, 'null', True) or True
+            required = getattr(self, 'required', False) or False
             blank = getattr(self, 'blank', True) or True
             min_length = getattr(self, 'min_length', None)
             max_length = getattr(self, 'max_length', None)
@@ -87,8 +87,8 @@ class Field:
                         raise ValidationError(exception, self.is_sub_field)
 
             else:
-                if null is False and self._value is None:
-                    exception = 'Field `{field_name}` can not be null'.format(
+                if required is True and self._value is None:
+                    exception = 'Field `{field_name}` is required'.format(
                         field_name=self._name
                     )
                     raise ValidationError(exception, self.is_sub_field)
@@ -122,15 +122,15 @@ class Field:
 class BoolField(Field):
     type = bool
 
-    def __init__(self, null=True, default=None):
-        self.null, self.default = null, default
+    def __init__(self, required=False, default=None):
+        self.required, self.default = required, default
 
 
 class StringField(Field):
     type = str
 
-    def __init__(self, null=True, blank=True, min_length=None, max_length=None, unique=False, index=None, default=None):
-        self.null = null
+    def __init__(self, required=False, blank=True, min_length=None, max_length=None, unique=False, index=None, default=None):
+        self.required = required
         self.blank = blank
         self.min_length = min_length
         self.max_length = max_length
@@ -142,8 +142,8 @@ class StringField(Field):
 class IntegerField(Field):
     type = int
 
-    def __init__(self, null=True, unique=False, default=None):
-        self.null = null
+    def __init__(self, required=False, unique=False, default=None):
+        self.required = required
         self.unique = unique
         self.default = default
 
@@ -151,8 +151,8 @@ class IntegerField(Field):
 class FloatField(Field):
     type = float
 
-    def __init__(self, null=True, unique=False, default=None):
-        self.null = null
+    def __init__(self, required=False, unique=False, default=None):
+        self.required = required
         self.unique = unique
         self.default = default
 
@@ -160,9 +160,9 @@ class FloatField(Field):
 class ListField(Field):
     type = list
 
-    def __init__(self, base_field=None, null=True, length=None, unique=False, default=None):
+    def __init__(self, base_field=None, required=False, length=None, unique=False, default=None):
         self.base_field = base_field
-        self.null = null
+        self.required = required
         self.length = length
         self.unique = unique
         self.default = default
@@ -187,8 +187,8 @@ class ListField(Field):
 class DictField(Field):
     type = dict
 
-    def __init__(self, null=True, unique=False, min_length=None, max_length=None, default=None):
-        self.null = null
+    def __init__(self, required=False, unique=False, min_length=None, max_length=None, default=None):
+        self.required = required
         self.unique = unique
         self.min_length = min_length
         self.max_length = max_length
@@ -202,8 +202,8 @@ class DictField(Field):
 class DateTimeField(Field):
     type = datetime
 
-    def __init__(self, null=True):
-        self.null = null
+    def __init__(self, required=False):
+        self.required = required
 
 
 class BaseRelationField(Field):
@@ -213,10 +213,10 @@ class BaseRelationField(Field):
     def _get_query(self):
         raise NotImplementedError
 
-    def __init__(self, relation, related_name=None, null=True):
+    def __init__(self, relation, related_name=None, required=False):
         self.relation = relation
         self.related_name = related_name
-        self.nul = null
+        self.required = required
 
     def __aiter__(self):
         return self

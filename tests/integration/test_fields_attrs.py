@@ -12,7 +12,7 @@ class Settings(MongoModel):
 
 
 class Test(MongoModel):
-    param = BoolField(null=False)
+    param = BoolField(required=True)
 
 
 class FieldsAttrsTests(BaseAsyncTestCase):
@@ -63,12 +63,12 @@ class FieldsAttrsTests(BaseAsyncTestCase):
 
         await settings.delete()
 
-    async def test_null(self):
+    async def test_required(self):
         test = Test()
 
         try:
             await test.save()
         except Exception as e:
-            self.assertTrue(isinstance(e, ValueError))
+            self.assertTrue(isinstance(e, ValidationError))
 
         await test.delete()

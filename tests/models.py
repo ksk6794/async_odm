@@ -14,16 +14,16 @@ class Post(MongoModel):
         # )
 
     title = StringField()
-    author = ForeignKey('Author', related_name='posts', null=False)
-    published = DateTimeField(null=True)
+    author = ForeignKey('Author', related_name='posts', required=True)
+    published = DateTimeField()
 
 
 class Author(MongoModel):
-    username = StringField(max_length=10, null=True)
-    age = IntegerField(null=True)
-    billing = FloatField(null=True)
-    documents = ListField(null=True)
-    data = DictField(null=True)
+    username = StringField(max_length=10)
+    age = IntegerField()
+    billing = FloatField()
+    documents = ListField()
+    data = DictField()
 
 
 class Name(MongoModel):
