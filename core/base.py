@@ -34,8 +34,12 @@ class BaseModel(type):
         return model
 
     @classmethod
+    def _get_model_module(cls, name, attrs):
+        return '.'.join((attrs.get('__module__'), name))
+
+    @classmethod
     def _get_connection(mcs, name, attrs):
-        model = '.'.join((attrs.get('__module__'), name))
+        model = mcs._get_model_module(name, attrs)
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
 
         if not settings_module:
@@ -68,15 +72,20 @@ class BaseModel(type):
         :return: str - collection name
         """
         meta = attrs.get('Meta')
-        collection_name = getattr(meta, 'collection_name', None) or '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
+        collection_name = getattr(
+            meta,
+            'collection_name',
+            '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
+        )
 
         for model_name, model in RelationManager().get_models().items():
             if collection_name in model.get_collection_name():
                 raise ValueError(
                     'The collection name `{collection_name}` already used by `{model_name}` model. '
-                    'Please, specify collection_name manually.'.format(
+                    'Please, specify collection_name manually for {new_model}.'.format(
                         collection_name=collection_name,
-                        model_name=model_name
+                        model_name=model_name,
+                        new_model=mcs._get_model_module(name, attrs)
                     )
                 )
 
