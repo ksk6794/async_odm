@@ -1,5 +1,4 @@
 from pymongo import ReturnDocument
-
 from .exceptions import DoesNotExist, MultipleObjectsReturned
 
 
@@ -11,14 +10,12 @@ class MongoDispatcher:
     async def count(self, **kwargs):
         collection = await self.get_collection()
         count = await collection.count(kwargs)
-
         return count
 
     async def get_collection(self):
         # TODO: Disallow conflicting collection names ('name', ...)
         database = await self.connection.get_database()
         collection = getattr(database, self.collection_name)
-
         return collection
 
     async def create(self, **kwargs):
@@ -44,18 +41,20 @@ class MongoDispatcher:
         :return: dict (Document before the changes)
         """
         collection = await self.get_collection()
-        document = await collection.find_one_and_update(filter={'_id': _id},
-                                                        update={'$set': kwargs},
-                                                        return_document=ReturnDocument.AFTER)
+        document = await collection.find_one_and_update(
+            filter={'_id': _id},
+            update={'$set': kwargs},
+            return_document=ReturnDocument.AFTER
+        )
         return document
 
-    async def get(self, **kwargs):
+    async def get(self, projection, **kwargs):
         count = await self.count(**kwargs)
 
         if count == 1:
             collection = await self.get_collection()
-            document = await collection.find_one(kwargs)
-
+            params = {'projection': projection} if projection else {}
+            document = await collection.find_one(kwargs, **params)
             return document
 
         elif count < 1:
@@ -72,13 +71,17 @@ class MongoDispatcher:
             'filter': dict,
             'sort': list,
             'limit': int,
-            'skip': int
+            'skip': int,
+            'projection': dict,
         }
         params = {}
         for param_name, param_type in available_params.items():
             param_value = kwargs.get(param_name)
 
             if isinstance(param_value, param_type):
+                if hasattr(param_value, '__len__') and not len(param_value):
+                    continue
+
                 params[param_name] = param_value
 
         cursor = collection.find(**params)

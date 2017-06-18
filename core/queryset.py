@@ -7,9 +7,9 @@ class QuerySet:
     model = None
 
     def __init__(self, **kwargs):
-        self.query = {}
-
         # TODO: aggregate
+        # TODO: fields
+        self._projection = {}
         self._all = False
         self._find = {}
         self._sort = []
@@ -24,7 +24,7 @@ class QuerySet:
 
     async def get(self, **kwargs):
         get_kwargs = self._to_query(**kwargs)
-        result = await self.model.get_dispatcher().get(**get_kwargs)
+        result = await self.model.get_dispatcher().get(self._projection, **get_kwargs)
         odm_object = self._to_object(result)
         return odm_object
 
@@ -67,6 +67,29 @@ class QuerySet:
         document = self.model(**kwargs)
         await document.save()
         return document
+
+    def fields(self, **kwargs):
+        available_operators = ('slice',)
+
+        for key, value in kwargs.items():
+            parts = key.split('__')
+
+            if parts[-1] in available_operators:
+                operator = parts.pop()
+                value = {'${}'.format(operator): value}
+
+            key = '.'.join(parts)
+            self._projection[key] = value
+
+        return self
+
+    def defer(self, *args):
+        self.fields(**{field_name: False for field_name in args})
+        return self
+
+    def only(self, *args):
+        self.fields(**{field_name: True for field_name in args})
+        return self
 
     async def bulk_create(self, *args):
         documents = []
@@ -157,7 +180,8 @@ class QuerySet:
                 sort=self._sort,
                 limit=self._limit,
                 skip=self._skip,
-                filter=self._find
+                filter=self._find,
+                projection=self._projection
             )
         return self._cursor
 

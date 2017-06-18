@@ -12,6 +12,7 @@ DATABASES = {
             'tests.integration.test_manager.Folder',
             'tests.integration.test_one_to_one.UserTest',
             'tests.integration.test_one_to_one.ProfileTest',
+            'tests.integration.test_queryset_fields_defer_only.User',
         ]
     },
     'test_odm': {
