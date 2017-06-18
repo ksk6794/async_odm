@@ -107,7 +107,6 @@ class QueryManagerTests(BaseAsyncTestCase):
             Folder(name='test'),
             Folder(name='test')
         )
-        cnt = await Folder.objects.filter(name='test').count()
 
         await Folder.objects.filter(name='test').update(name='updated')
         folders = await Folder.objects.filter(name='updated')

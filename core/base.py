@@ -80,12 +80,13 @@ class BaseModel(type):
 
         for model_name, model in RelationManager().get_models().items():
             if collection_name in model.get_collection_name():
+                # TODO: Check only for current database
                 raise ValueError(
                     'The collection name `{collection_name}` already used by `{model_name}` model. '
-                    'Please, specify collection_name manually for {new_model}.'.format(
+                    'Please, specify a unique collection_name manually for {cur_model}.'.format(
                         collection_name=collection_name,
                         model_name=model_name,
-                        new_model=mcs._get_model_module(name, attrs)
+                        cur_model=mcs._get_model_module(name, attrs)
                     )
                 )
 
