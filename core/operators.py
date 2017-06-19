@@ -1,15 +1,5 @@
-from core.fields import BaseRelationField
-
-
 class Operator:
-    def __init__(self, model):
-        self.model = model
-
     def process(self, operator, field_name, value):
-        field_instance = self.model.get_declared_fields().get(field_name)
-        operator = 'rel' if isinstance(field_instance, BaseRelationField) else operator
-        operator = 'base' if not operator else operator
-
         method = getattr(self, 'op_{}'.format(operator), None)
 
         if not callable(method):

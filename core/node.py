@@ -1,8 +1,8 @@
 import copy
 
-from core.operators import Operator
-from core.utils import update
 from core.fields import BaseRelationField
+from core.utils import update
+from core.operators import Operator
 
 
 class QNodeVisitor(object):
@@ -54,8 +54,7 @@ class SimplificationVisitor(QNodeVisitor):
 
         for query in queries:
             ops = set(query.keys())
-            # Make sure that the same operation isn't applied more than once
-            # to a single field
+            # Make sure that the same operation isn't applied more than once to a single field
             intersection = ops.intersection(query_ops)
             if intersection:
                 raise DuplicateQueryConditionsError()
@@ -76,10 +75,7 @@ class QueryCompilerVisitor(QNodeVisitor):
         self.manager = manager
 
     def visit_combination(self, combination):
-        operator = '$and'
-        if combination.operation == combination.OR:
-            operator = '$or'
-
+        operator = '$and' if combination.operation != combination.OR else '$or'
         return {operator: combination.children}
 
     def visit_query(self, query):
@@ -93,9 +89,13 @@ class QueryCompilerVisitor(QNodeVisitor):
 
             # Split query conditions by delimiter and modify it to MongoDB format.
             if self.delimiter in field_name:
-                field_name, operator = field_name.split(self.delimiter)
+                field_name, operator = field_name.split(self.delimiter, 1)
 
-            condition = Operator(manager.model).process(operator, field_name, field_value)
+            field_instance = manager.model.get_declared_fields().get(field_name)
+            operator = 'base' if not operator else operator
+            operator = 'rel' if isinstance(field_instance, BaseRelationField) else operator
+
+            condition = Operator().process(operator, field_name, field_value)
             update(query, condition)
 
         return query
