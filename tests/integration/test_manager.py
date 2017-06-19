@@ -64,6 +64,13 @@ class QueryManagerTests(BaseAsyncTestCase):
 
         await folder.delete()
 
+    async def test_get_by_undeclared_field(self):
+        await Folder.objects.create(name='test', test='test')
+
+        folder = await Folder.objects.get(test='test')
+        self.assertEqual(folder.name, 'test')
+        await folder.delete()
+
     async def test_get(self):
         folder_1 = Folder(name='movies')
         await folder_1.save()

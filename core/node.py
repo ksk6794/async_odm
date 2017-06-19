@@ -1,4 +1,6 @@
 import copy
+
+from core.operators import Operator
 from core.utils import update
 from core.fields import BaseRelationField
 
@@ -39,9 +41,11 @@ class SimplificationVisitor(QNodeVisitor):
                 except DuplicateQueryConditionsError:
                     # Cannot be simplified
                     pass
+
         return combination
 
-    def _query_conjunction(self, queries):
+    @staticmethod
+    def _query_conjunction(queries):
         """
         Merges query dicts - effectively &ing them together.
         """
@@ -58,6 +62,7 @@ class SimplificationVisitor(QNodeVisitor):
 
             query_ops.update(ops)
             combined_query.update(copy.deepcopy(query))
+
         return combined_query
 
 
@@ -65,16 +70,15 @@ class QueryCompilerVisitor(QNodeVisitor):
     """
     Compiles the nodes in a query tree to a PyMongo-compatible query dictionary.
     """
-    possible_conditions = ('gt', 'gte', 'lt', 'lte', 'in', 'all')
     delimiter = '__'
 
     def __init__(self, manager):
         self.manager = manager
 
     def visit_combination(self, combination):
-        operator = "$and"
+        operator = '$and'
         if combination.operation == combination.OR:
-            operator = "$or"
+            operator = '$or'
 
         return {operator: combination.children}
 
@@ -82,42 +86,19 @@ class QueryCompilerVisitor(QNodeVisitor):
         return self.transform_query(self.manager, **query.query)
 
     def transform_query(self, manager, **kwargs):
-        mongo_query = {}
+        query = {}
 
         for field_name, field_value in kwargs.copy().items():
+            operator = None
+
             # Split query conditions by delimiter and modify it to MongoDB format.
             if self.delimiter in field_name:
-                field_name_splt = field_name.split(self.delimiter)
-                field_name = field_name_splt[0]
-                condition = field_name_splt[1]
+                field_name, operator = field_name.split(self.delimiter)
 
-                if condition in self.possible_conditions:
-                    field_value = {'${}'.format(condition): field_value}
+            condition = Operator(manager.model).process(operator, field_name, field_value)
+            update(query, condition)
 
-                else:
-                    exception = 'Unknown condition `{condition}`'.format(
-                        condition=condition
-                    )
-                    raise Exception(exception)
-
-            if field_name != '_id' and field_name not in manager.model.get_declared_fields():
-                exception = 'Unknown field `{field_name}`'.format(
-                    field_name=field_name
-                )
-                raise Exception(exception)
-
-            field_instance = manager.model.get_declared_fields().get(field_name)
-
-            # Set the id of the related document
-            if isinstance(field_instance, BaseRelationField):
-                field_name = '{}.$id'.format(field_name)
-
-                if hasattr(field_value, '_id'):
-                    field_value = getattr(field_value, '_id')
-
-            update(mongo_query, {field_name: field_value})
-
-        return mongo_query
+        return query
 
 
 class QNode(object):
