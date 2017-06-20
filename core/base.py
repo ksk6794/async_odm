@@ -43,7 +43,7 @@ class BaseModel(type):
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
 
         if not settings_module:
-            raise ImportError('Specify an `ODM_SETTINGS_MODULE` variable in the environment.')
+            raise ImportError('Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.')
 
         settings = importlib.import_module(settings_module)
         db_name, db_settings = None, None
@@ -51,9 +51,10 @@ class BaseModel(type):
         for db_name, db_settings in settings.DATABASES.items():
             if model in db_settings.get('models'):
                 break
+            db_name, db_settings = None, None
 
         if not (db_name or db_settings):
-            exception = 'There is no database configuration for the `{}` model'
+            exception = 'There is no database configuration for the \'{}\' model'
             raise Exception(exception.format(model))
 
         return db_name, db_settings
@@ -434,6 +435,7 @@ class MongoModel(metaclass=BaseModel):
         insert_result = await self._dispatcher.create(**field_values)
 
         # Generate document from field_values and inserted_id
+        # TODO: Retrieve actual values from a saved document
         field_values.update({'_id': insert_result.inserted_id})
         document = self.get_external_values(field_values)
 

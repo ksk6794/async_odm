@@ -1,7 +1,9 @@
-from datetime import datetime
+import asyncio
+from unittest.mock import patch, MagicMock
+from datetime import datetime, timedelta
 from core.base import MongoModel
 from core.exceptions import ValidationError
-from tests.base import BaseAsyncTestCase
+from tests.base import BaseAsyncTestCase, AsyncMock
 from core.fields import StringField, IntegerField, ListField, DictField, FloatField, DateTimeField, BoolField
 
 
@@ -16,9 +18,29 @@ class User(MongoModel):
     is_active = BoolField()
 
 
+class TestDT(MongoModel):
+    test = StringField()
+    dt = DateTimeField(auto_now_create=True, auto_now_update=True)
+
+
 class FieldsTypesTests(BaseAsyncTestCase):
     def setUp(self):
         pass
+
+    async def test_dt_auto_now(self):
+        test_dt = await TestDT.objects.create()
+        test_dt = await TestDT.objects.get(_id=test_dt._id)
+        self.assertTrue(isinstance(test_dt.dt, datetime))
+        create_time = test_dt.dt
+
+        test_dt.test = 'test'
+        await test_dt.save()
+        self.assertTrue(isinstance(test_dt.dt, datetime))
+        update_time = test_dt.dt
+
+        self.assertTrue(update_time > create_time)
+        res = await test_dt.delete()
+        print(res)
 
     async def test_type_char(self):
         user = User(username='Bill')
