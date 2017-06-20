@@ -174,6 +174,7 @@ class ListField(Field):
     def validate(self):
         value = super().validate()
 
+        # TODO: use multiprocessing pool of workers
         if value and self.base_field is not None:
             for list_item in value:
                 self.base_field.is_sub_field = True
@@ -202,8 +203,19 @@ class DictField(Field):
 class DateTimeField(Field):
     type = datetime
 
-    def __init__(self, required=False):
+    # TODO: Tests for auto_now_*
+    def __init__(self, required=False, auto_now_create=False, auto_now_update=False):
         self.required = required
+        self.auto_now_create = auto_now_create
+        self.auto_now_update = auto_now_update
+
+    def validate(self):
+        value = super().validate()
+
+        if (self.auto_now_create and not self._value) or self.auto_now_update:
+            value = datetime.now()
+
+        return value
 
 
 class BaseRelationField(Field):
