@@ -27,20 +27,21 @@ class FieldsTypesTests(BaseAsyncTestCase):
     def setUp(self):
         pass
 
-    async def test_dt_auto_now(self):
+    async def test_dt_auto_now_create(self):
         test_dt = await TestDT.objects.create()
-        test_dt = await TestDT.objects.get(_id=test_dt._id)
         self.assertTrue(isinstance(test_dt.dt, datetime))
-        create_time = test_dt.dt
+        await test_dt.delete()
 
-        test_dt.test = 'test'
+    async def test_dt_auto_now_update(self):
+        create_dt = datetime.now() - timedelta(hours=1)
+        test_dt = await TestDT.objects.create(dt=create_dt)
+
+        test_dt.test = 'updated'
         await test_dt.save()
-        self.assertTrue(isinstance(test_dt.dt, datetime))
-        update_time = test_dt.dt
-
-        self.assertTrue(update_time > create_time)
-        res = await test_dt.delete()
-        print(res)
+        update_dt = test_dt.dt
+        self.assertTrue(update_dt > create_dt)
+        
+        await test_dt.delete()
 
     async def test_type_char(self):
         user = User(username='Bill')

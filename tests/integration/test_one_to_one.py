@@ -25,6 +25,7 @@ class ToQueryConditionsTests(BaseAsyncTestCase):
 
         profile = await user.profile
         user = await profile.user
+        self.assertEqual(user.username, 'Vasya')
 
         exception = False
 
@@ -35,3 +36,19 @@ class ToQueryConditionsTests(BaseAsyncTestCase):
             exception = True
 
         self.assertTrue(exception)
+
+    async def test_w(self):
+        profile = await ProfileTest.objects.create(position='test_position')
+        user = await UserTest.objects.create(username='Vasya', profile=profile)
+
+        profile_2 = await ProfileTest.objects.create(position='test_position_2')
+        user_2 = await UserTest.objects.create(username='Petya', profile=profile_2)
+
+        profile = await user.profile
+        self.assertEqual(profile.position, 'test_position')
+
+        profile_2 = await user_2.profile
+        self.assertEqual(profile_2.position, 'test_position_2')
+
+        await ProfileTest.objects.delete()
+        await UserTest.objects.delete()

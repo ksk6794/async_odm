@@ -8,7 +8,6 @@ class QuerySet:
 
     def __init__(self, **kwargs):
         # TODO: aggregate
-        # TODO: fields
         self._projection = {}
         self._all = False
         self._find = {}

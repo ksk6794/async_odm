@@ -41,65 +41,62 @@ class Field:
     def set_field_value(self, value):
         self._value = value
 
-    def get_field_name(self):
-        return self._name
-
-    def validate(self):
-        if self._name:
+    def validate(self, name, value):
+        if name:
             required = getattr(self, 'required', False) or False
             blank = getattr(self, 'blank', True) or True
             min_length = getattr(self, 'min_length', None)
             max_length = getattr(self, 'max_length', None)
             default = getattr(self, 'default', None)
 
-            if default is not None and not self._value:
+            if default is not None and not value:
                 # If the `default` attribute is a callable object.
-                self._value = default() if callable(default) else default
+                value = default() if callable(default) else default
 
-            if self._value is not None:
-                if self.type and not isinstance(self._value, self.type):
+            if value is not None:
+                if self.type and not isinstance(value, self.type):
                     exception = 'Field `{field_name} has wrong type! ' \
                                 'Expected {field_type}`'.format(
-                                    field_name=self._name,
+                                    field_name=name,
                                     field_type=self.type.__name__
                                 )
                     raise ValidationError(exception, self.is_sub_field)
 
                 if min_length or max_length:
-                    if hasattr(self._value, '__len__'):
-                        if max_length and len(self._value) > max_length:
+                    if hasattr(value, '__len__'):
+                        if max_length and len(value) > max_length:
                             exception = 'Field `{field_name}` exceeds the max length {length}'.format(
-                                field_name=self._name,
+                                field_name=name,
                                 length=max_length
                             )
                             raise ValidationError(exception, self.is_sub_field)
-                        elif min_length and len(self._value) < min_length:
+                        elif min_length and len(value) < min_length:
                             exception = 'Field `{field_name}` exceeds the min length {length}'.format(
-                                field_name=self._name,
+                                field_name=name,
                                 length=min_length
                             )
                             raise ValidationError(exception, self.is_sub_field)
                     else:
                         exception = 'Cannot count the length of the field `{field_name}`.' \
                                     'Define the __len__ method'.format(
-                                        field_name=self._name
+                                        field_name=name
                                     )
                         raise ValidationError(exception, self.is_sub_field)
 
             else:
-                if required is True and self._value is None:
+                if required is True and value is None:
                     exception = 'Field `{field_name}` is required'.format(
-                        field_name=self._name
+                        field_name=name
                     )
                     raise ValidationError(exception, self.is_sub_field)
 
-                if blank is False and self._value == '':
+                if blank is False and value == '':
                     exception = 'Field `{field_name}` can not be blank'.format(
-                        field_name=self._name
+                        field_name=name
                     )
                     raise ValidationError(exception, self.is_sub_field)
 
-        return self._value
+        return value
 
     @staticmethod
     def to_internal_value(value):
@@ -171,16 +168,14 @@ class ListField(Field):
     def __iter__(self):
         return self
 
-    def validate(self):
-        value = super().validate()
+    def validate(self, name, value):
+        value = super().validate(name, value)
 
         # TODO: use multiprocessing pool of workers
         if value and self.base_field is not None:
             for list_item in value:
                 self.base_field.is_sub_field = True
-                self.base_field.set_field_name(self.get_field_name())
-                self.base_field.set_field_value(list_item)
-                self.base_field.validate()
+                self.base_field.validate(name, list_item)
 
         return value
 
@@ -209,11 +204,14 @@ class DateTimeField(Field):
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
 
-    def validate(self):
-        value = super().validate()
+    def validate(self, name, value):
+        value = super().validate(name, value)
 
         if (self.auto_now_create and not self._value) or self.auto_now_update:
-            value = datetime.now()
+            # Because Monogob rounds microseconds,
+            # and ODM does not request the created document,
+            # for data consistency I reset them
+            value = datetime.now().replace(microsecond=0)
 
         return value
 

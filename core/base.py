@@ -137,9 +137,6 @@ class BaseModel(type):
                     )
                     raise AttributeError(exception)
 
-                # Add dispatcher and field name to each field instance (for validation)
-                field_instance.set_field_name(field_name)
-
                 declared_fields[field_name] = field_instance
                 attrs.pop(field_name)
 
@@ -285,23 +282,32 @@ class MongoModel(metaclass=BaseModel):
 
     def __getattribute__(self, item):
         attr = super().__getattribute__(item)
-
         declared_fields = object.__getattribute__(self, '_declared_fields')
         field_instance = declared_fields.get(item)
 
         if isinstance(field_instance, (BaseRelationField, BaseBackwardRelationField)):
-            attr = field_instance
+            # Set the value with relation object id for a field to provide base relation
+            if isinstance(field_instance, BaseRelationField):
+                field_value = object.__getattribute__(self, '__dict__').get(item)
+                field_instance.set_field_value(field_value)
 
             # Set the _id of the current object as a value
             # provide backward relationship for relation fields
-            if isinstance(attr, BaseBackwardRelationField):
-                attr._value = object.__getattribute__(self, '_id')
+            elif isinstance(field_instance, BaseBackwardRelationField):
+                field_value = object.__getattribute__(self, '_id')
+                field_instance.set_field_value(field_value)
+
+            attr = field_instance
 
         return attr
 
     @classproperty
     def objects(cls):
         return QuerySet(model=cls)
+
+    @property
+    def id(self):
+        return self._id
 
     @classmethod
     def get_declared_fields(cls):
@@ -322,10 +328,6 @@ class MongoModel(metaclass=BaseModel):
     @classmethod
     def get_sorting(cls):
         return cls._sorting
-
-    @property
-    def id(self):
-        return self._id
 
     async def save(self):
         document = await self._update() if self._id else await self._create()
@@ -355,31 +357,17 @@ class MongoModel(metaclass=BaseModel):
     async def get_internal_values(self):
         """
         Convert external values to internal for saving to a database.
-        :return: dict
         """
         fields_values = {}
 
         for field_name, field_instance in self.get_declared_fields().items():
-            field_value = self.__dict__.get(field_name)
-            field_instance.set_field_value(field_value)
+            field_value = None
 
-            # Replace to relation ObjectId
             if isinstance(field_instance, BaseRelationField):
-                field_value = await self._process_relation_field(field_name, field_instance)
+                field_value = await self._relation_field_to_internal(field_name, field_instance)
 
             elif isinstance(field_instance, Field):
-                # Validate field value
-                field_value = field_instance.validate()
-
-                # Call Model child (custom) validate methods
-                new_value = await self._child_validator(field_name)
-
-                # Set the post validate value
-                if new_value is not None:
-                    field_value = new_value
-
-                # Bring to the internal value
-                field_value = field_instance.to_internal_value(field_value)
+                field_value = await self._field_to_internal(field_name, field_instance)
 
             fields_values[field_name] = field_value
 
@@ -389,7 +377,36 @@ class MongoModel(metaclass=BaseModel):
 
         return fields_values
 
-    async def _process_relation_field(self, field_name, field_instance):
+    async def _create(self):
+        """
+        Create document with all defined fields.
+        :return: dict
+        """
+        field_values = await self.get_internal_values()
+        insert_result = await self._dispatcher.create(**field_values)
+
+        # Generate document from field_values and inserted_id
+        field_values.update({'_id': insert_result.inserted_id})
+        document = self.get_external_values(field_values)
+
+        return document
+
+    async def _update(self):
+        """
+        Update only modified document fields.
+        :return: dict
+        """
+        field_values = await self.get_internal_values()
+        modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
+        document = await self._dispatcher.update_one(self._id, **modified)
+        document = self.get_external_values(document)
+
+        return document
+
+    async def _relation_field_to_internal(self, field_name, field_instance):
+        """
+        Replace to relation ObjectId
+        """
         field_value = self.__dict__.get(field_name)
 
         # Set the DBRef for the field value (create) or leave the same (update)
@@ -410,6 +427,23 @@ class MongoModel(metaclass=BaseModel):
 
         return field_value
 
+    async def _field_to_internal(self, field_name, field_instance):
+        # Validate field value
+        field_value = self.__dict__.get(field_name)
+        field_value = field_instance.validate(field_name, field_value)
+
+        # Call Model child (custom) validate methods
+        new_value = await self._child_validator(field_name)
+
+        # Set the post validate value
+        if new_value is not None:
+            field_value = new_value
+
+        # Bring to the internal value
+        field_value = field_instance.to_internal_value(field_value)
+
+        return field_value
+
     async def _child_validator(self, field_name):
         """
         Call user-defined validation methods.
@@ -425,30 +459,3 @@ class MongoModel(metaclass=BaseModel):
             new_value = await validate_method(value=value) if is_coroutine else validate_method(value=value)
 
         return new_value
-
-    async def _create(self):
-        """
-        Create document with all defined fields.
-        :return: dict
-        """
-        field_values = await self.get_internal_values()
-        insert_result = await self._dispatcher.create(**field_values)
-
-        # Generate document from field_values and inserted_id
-        # TODO: Retrieve actual values from a saved document
-        field_values.update({'_id': insert_result.inserted_id})
-        document = self.get_external_values(field_values)
-
-        return document
-
-    async def _update(self):
-        """
-        Update only modified document fields.
-        :return: dict
-        """
-        field_values = await self.get_internal_values()
-        modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
-        document = await self._dispatcher.update_one(self._id, **modified)
-        document = self.get_external_values(document)
-
-        return document
