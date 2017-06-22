@@ -1,5 +1,6 @@
 from datetime import datetime
 from core.exceptions import ValidationError
+from .constants import CREATE, UPDATE
 
 
 class Field:
@@ -16,6 +17,7 @@ class Field:
         'min_length': int,
         'max_length': int,
         'unique': bool,
+        'choices': (tuple, list),
     }
 
     def __setattr__(self, key, value):
@@ -23,17 +25,15 @@ class Field:
             required_type = self._reserved_attributes.get(key)
 
             if value is not None and not isinstance(value, required_type):
-                exception = 'Reserved attr `{attr_name}` has wrong type! ' \
-                            'Expected `{attr_type}`'.format(
-                                attr_name=key,
-                                attr_type=required_type.__name__
-                            )
-                raise TypeError(exception)
+                raise TypeError(
+                    'Reserved attr `{attr_name}` has wrong type! '
+                    'Expected `{attr_type}`'.format(
+                        attr_name=key,
+                        attr_type=required_type.__name__
+                    )
+                )
 
         super().__setattr__(key, value)
-
-    def __len__(self):
-        return len(self._value)
 
     def set_field_name(self, name):
         self._name = name
@@ -41,17 +41,62 @@ class Field:
     def set_field_value(self, value):
         self._value = value
 
+    def get_choice_key(self, value):
+        choices = getattr(self, 'choices', None)
+
+        if choices:
+            choices = {key: value for key, value in choices}
+
+            if value in choices.keys():
+                value = choices.get(value)
+
+            elif value not in choices.values():
+                raise ValueError(
+                    'The value \'{field_value}\' is not specified in the \'choices\' attribute.'.format(
+                        field_value=value
+                    )
+                )
+
+        return value
+
+    def get_choice_value(self, key):
+        choices = getattr(self, 'choices', None)
+        value = key
+
+        if choices:
+            choices = {value: key for key, value in choices}
+
+            if key not in choices.keys():
+                raise ValueError(
+                    'The value \'{field_value}\' is not specified in the \'choices\' attribute.'.format(
+                        field_value=key
+                    )
+                )
+
+            value = choices.get(key)
+
+        return value
+
+    def get_value(self, name, value, action):
+        default = getattr(self, 'default', None)
+        choices = getattr(self, 'choices', None)
+
+        # Process the 'default' attribute
+        if default is not None and not value:
+            value = default() if callable(default) else default
+
+        # Process the 'choices' attribute
+        if value and choices:
+            value = self.get_choice_key(value)
+
+        return value
+
     def validate(self, name, value):
         if name:
             required = getattr(self, 'required', False) or False
             blank = getattr(self, 'blank', True) or True
             min_length = getattr(self, 'min_length', None)
             max_length = getattr(self, 'max_length', None)
-            default = getattr(self, 'default', None)
-
-            if default is not None and not value:
-                # If the `default` attribute is a callable object.
-                value = default() if callable(default) else default
 
             if value is not None:
                 if self.type and not isinstance(value, self.type):
@@ -70,12 +115,14 @@ class Field:
                                 length=max_length
                             )
                             raise ValidationError(exception, self.is_sub_field)
+
                         elif min_length and len(value) < min_length:
                             exception = 'Field `{field_name}` exceeds the min length {length}'.format(
                                 field_name=name,
                                 length=min_length
                             )
                             raise ValidationError(exception, self.is_sub_field)
+
                     else:
                         exception = 'Cannot count the length of the field `{field_name}`.' \
                                     'Define the __len__ method'.format(
@@ -98,16 +145,14 @@ class Field:
 
         return value
 
-    @staticmethod
-    def to_internal_value(value):
+    def to_internal_value(self, value):
         """
         Define this method if you need to save specific data format.
         Here you must to serialize your data.
         """
         return value
 
-    @staticmethod
-    def to_external_value(value):
+    def to_external_value(self, value):
         """
         Define this method if you specified `to_internal_value`,
         to represent data from the storage.
@@ -119,14 +164,17 @@ class Field:
 class BoolField(Field):
     type = bool
 
-    def __init__(self, required=False, default=None):
-        self.required, self.default = required, default
+    def __init__(self, required=False, default=None, choices=None):
+        self.required = required
+        self.default = default
+        self.choices = choices
 
 
 class StringField(Field):
     type = str
 
-    def __init__(self, required=False, blank=True, min_length=None, max_length=None, unique=False, index=None, default=None):
+    def __init__(self, required=False, blank=True, min_length=None, max_length=None,
+                 unique=False, index=None, default=None, choices=None):
         self.required = required
         self.blank = blank
         self.min_length = min_length
@@ -134,24 +182,27 @@ class StringField(Field):
         self.unique = unique
         self.index = index
         self.default = default
+        self.choices = choices
 
 
 class IntegerField(Field):
     type = int
 
-    def __init__(self, required=False, unique=False, default=None):
+    def __init__(self, required=False, unique=False, default=None, choices=None):
         self.required = required
         self.unique = unique
         self.default = default
+        self.choices = choices
 
 
 class FloatField(Field):
     type = float
 
-    def __init__(self, required=False, unique=False, default=None):
+    def __init__(self, required=False, unique=False, default=None, choices=None):
         self.required = required
         self.unique = unique
         self.default = default
+        self.choices = choices
 
 
 class ListField(Field):
@@ -204,12 +255,9 @@ class DateTimeField(Field):
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
 
-    def validate(self, name, value):
-        value = super().validate(name, value)
-
-        if (self.auto_now_create and not self._value) or self.auto_now_update:
-            # Because Monogob rounds microseconds,
-            # and ODM does not request the created document,
+    def get_value(self, name, value, action):
+        if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
+            # MonogoDB rounds microseconds, and ODM does not request the created document,
             # for data consistency I reset them
             value = datetime.now().replace(microsecond=0)
 

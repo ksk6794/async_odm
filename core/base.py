@@ -9,6 +9,7 @@ from .queryset import QuerySet
 from .dispatchers import MongoDispatcher
 from core.connection import MongoConnection
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
+from .constants import CREATE, UPDATE
 
 WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
 
@@ -251,6 +252,9 @@ class MongoModel(metaclass=BaseModel):
     _declared_fields = None
     _sorting = None
 
+    # Stores the current action (save/update) for field validation
+    _action = None
+
     def __init__(self, **document):
         # Fields that were set in the model instance, but not declared.
         self._undeclared_fields = {}
@@ -280,23 +284,61 @@ class MongoModel(metaclass=BaseModel):
             self._modified_fields.append(key)
         super().__setattr__(key, value)
 
+    def __getattr__(self, item):
+        # TODO: Use closure to make get_FOO_display callable.
+        # TODO: Test it!
+        match = re.match('get_(?P<field_name>\w+)_display', item)
+
+        if match:
+            field_name = match.group('field_name')
+            declared_fields = self.get_declared_fields()
+
+            if field_name in declared_fields:
+                field_instance = declared_fields.get(field_name)
+                choices = getattr(field_instance, 'choices', None)
+
+                if choices:
+                    field_value = self.__dict__.get(field_name)
+                    display = field_instance.get_choice_value(field_value)
+                    return display
+
+                else:
+                    raise AttributeError(
+                        'Field \'{field_name}\' has not attribute \'choices\''.format(
+                            field_name=field_name
+                        )
+                    )
+            else:
+                raise AttributeError(
+                    'Field \'{field_name}\' is not declared'.format(
+                        field_name=field_name
+                    )
+                )
+        else:
+            raise AttributeError(
+                '\'{model_name}\' model has no attribute \'{attribute}\''.format(
+                    model_name=self.__class__.__name__,
+                    attribute=item
+                )
+            )
+
     def __getattribute__(self, item):
         attr = super().__getattribute__(item)
         declared_fields = object.__getattribute__(self, '_declared_fields')
         field_instance = declared_fields.get(item)
+        field_value = None
 
         if isinstance(field_instance, (BaseRelationField, BaseBackwardRelationField)):
             # Set the value with relation object id for a field to provide base relation
             if isinstance(field_instance, BaseRelationField):
                 field_value = object.__getattribute__(self, '__dict__').get(item)
-                field_instance.set_field_value(field_value)
 
             # Set the _id of the current object as a value
             # provide backward relationship for relation fields
             elif isinstance(field_instance, BaseBackwardRelationField):
                 field_value = object.__getattribute__(self, '_id')
-                field_instance.set_field_value(field_value)
 
+            field_instance.set_field_value(field_value)
             attr = field_instance
 
         return attr
@@ -332,6 +374,7 @@ class MongoModel(metaclass=BaseModel):
     async def save(self):
         document = await self._update() if self._id else await self._create()
         self.__dict__.update(document)
+        self._action = None
 
     async def delete(self):
         await self._dispatcher.delete_one(self._id)
@@ -361,6 +404,10 @@ class MongoModel(metaclass=BaseModel):
         fields_values = {}
 
         for field_name, field_instance in self.get_declared_fields().items():
+            # Bring to internal values only modified fields (for update action)
+            if self._action is UPDATE and field_name not in self._modified_fields:
+                continue
+
             field_value = None
 
             if isinstance(field_instance, BaseRelationField):
@@ -382,6 +429,7 @@ class MongoModel(metaclass=BaseModel):
         Create document with all defined fields.
         :return: dict
         """
+        self._action = CREATE
         field_values = await self.get_internal_values()
         insert_result = await self._dispatcher.create(**field_values)
 
@@ -396,9 +444,9 @@ class MongoModel(metaclass=BaseModel):
         Update only modified document fields.
         :return: dict
         """
+        self._action = UPDATE
         field_values = await self.get_internal_values()
-        modified = {key: value for key, value in field_values.items() if key in self._modified_fields}
-        document = await self._dispatcher.update_one(self._id, **modified)
+        document = await self._dispatcher.update_one(self._id, **field_values)
         document = self.get_external_values(document)
 
         return document
@@ -430,7 +478,8 @@ class MongoModel(metaclass=BaseModel):
     async def _field_to_internal(self, field_name, field_instance):
         # Validate field value
         field_value = self.__dict__.get(field_name)
-        field_value = field_instance.validate(field_name, field_value)
+        field_value = field_instance.get_value(field_name, field_value, self._action)
+        field_instance.validate(field_name, field_value)
 
         # Call Model child (custom) validate methods
         new_value = await self._child_validator(field_name)
