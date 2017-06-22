@@ -285,8 +285,6 @@ class MongoModel(metaclass=BaseModel):
         super().__setattr__(key, value)
 
     def __getattr__(self, item):
-        # TODO: Use closure to make get_FOO_display callable.
-        # TODO: Test it!
         match = re.match('get_(?P<field_name>\w+)_display', item)
 
         if match:
@@ -298,9 +296,12 @@ class MongoModel(metaclass=BaseModel):
                 choices = getattr(field_instance, 'choices', None)
 
                 if choices:
-                    field_value = self.__dict__.get(field_name)
-                    display = field_instance.get_choice_value(field_value)
-                    return display
+                    # Closure is used to make get_FOO_display callable
+                    def _func():
+                        field_value = self.__dict__.get(field_name)
+                        display = field_instance.get_choice_value(field_value)
+                        return display
+                    return _func
 
                 else:
                     raise AttributeError(
