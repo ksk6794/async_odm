@@ -18,6 +18,7 @@ class Field:
         'max_length': int,
         'unique': bool,
         'choices': (tuple, list),
+        'on_delete': int
     }
 
     def __setattr__(self, key, value):
@@ -268,13 +269,11 @@ class BaseRelationField(Field):
     backward_class = None
     _query = None
 
-    def _get_query(self):
-        raise NotImplementedError
-
-    def __init__(self, relation, related_name=None, required=False):
+    def __init__(self, relation, related_name=None, required=False, on_delete=None):
         self.relation = relation
         self.related_name = related_name
         self.required = required
+        self.on_delete = on_delete
 
     def __aiter__(self):
         return self
@@ -287,6 +286,9 @@ class BaseRelationField(Field):
 
     def __await__(self):
         return self._get_query().__await__()
+
+    def _get_query(self):
+        raise NotImplementedError
 
 
 class BaseBackwardRelationField(Field):

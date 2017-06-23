@@ -217,17 +217,17 @@ class RelationManager:
     def _handle_relation(field_name, field_instance, rel_model, model):
         # The model referred to by the current model
         field_instance.relation = rel_model
-        related_name = field_instance.related_name
 
-        # If the parameter `related_name` was specified
-        if related_name:
-            # Add a field to retrieve referring objects to the current object
-            backward_relation = field_instance.backward_class(model)
-            backward_relation._name = field_name
+        # If the parameter `related_name` is not specified - (collection name)_set
+        related_name = field_instance.related_name or '{}_set'.format(model.get_collection_name())
 
-            # Add backward relation by related_name argument
-            declared_fields = getattr(rel_model, '_declared_fields')
-            declared_fields[related_name] = backward_relation
+        # Add a field to retrieve referring objects to the current object
+        backward_relation = field_instance.backward_class(model)
+        backward_relation._name = field_name
+
+        # Add backward relation by related_name argument
+        declared_fields = getattr(rel_model, '_declared_fields')
+        declared_fields[related_name] = backward_relation
 
     def _handle_waited_relations(self):
         for waited_relation in self._waited_relations:
@@ -242,6 +242,16 @@ class RelationManager:
                 self._handle_relation(field_name, field_instance, rel_model, model)
                 index = self._waited_relations.index(waited_relation)
                 del self._waited_relations[index]
+
+
+class DeleteManager:
+    def __init__(self, objects):
+        self.objects = objects
+
+    def cascade(self):
+        for object in self.objects:
+            for field_instance in object.get_declared_fields():
+                pass
 
 
 class MongoModel(metaclass=BaseModel):
