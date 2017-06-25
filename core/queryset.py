@@ -189,7 +189,9 @@ class QuerySet:
         return self._cursor
 
     async def _to_list(self):
-        return [self._to_object(document) async for document in await self.cursor]
+        res = [self._to_object(document) async for document in await self.cursor]
+        self._cursor = None
+        return res
 
     def __aiter__(self):
         return self

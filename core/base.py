@@ -244,14 +244,54 @@ class RelationManager:
                 del self._waited_relations[index]
 
 
-class DeleteManager:
-    def __init__(self, objects):
-        self.objects = objects
+class OnDeleteManager:
+    def __init__(self, odm_objects):
+        self.odm_objects = odm_objects
 
-    def cascade(self):
-        for object in self.objects:
-            for field_instance in object.get_declared_fields():
-                pass
+    @staticmethod
+    def has_backward_relations(odm_object):
+        output = False
+        for field_instance in odm_object.get_declared_fields().values():
+            if isinstance(field_instance, BaseBackwardRelationField):
+                output = True
+                break
+
+        return output
+
+    async def set_null(self):
+        # TODO: Move this code section to function-generator
+        for odm_object in self.odm_objects:
+            for field_name, field_instance in odm_object.get_declared_fields().items():
+                if isinstance(field_instance, BaseBackwardRelationField):
+                    bwd_rel = await getattr(odm_object, field_name)
+                    children = bwd_rel if isinstance(bwd_rel, list) else [bwd_rel]
+
+                    for child in children:
+                        # TODO: Find the field by which backward is established and set value null (if possible)
+                        pass
+
+    async def cascade(self, odm_objects=None):
+        odm_objects = odm_objects if odm_objects is not None else self.odm_objects
+        for_delete = []
+
+        for odm_object in odm_objects:
+            item = {
+                'dispatcher': odm_object.get_dispatcher(),
+                'document_id': odm_object.id,
+                'children': None
+            }
+
+            for field_name, field_instance in odm_object.get_declared_fields().items():
+                if isinstance(field_instance, BaseBackwardRelationField):
+                    bwd_rel = await getattr(odm_object, field_name)
+
+                    # TODO: Check if this is MongoModel, not list
+                    children = bwd_rel if isinstance(bwd_rel, list) else [bwd_rel]
+                    item['children'] = await self.cascade(children)
+
+            for_delete.append(item)
+
+        return for_delete
 
 
 class MongoModel(metaclass=BaseModel):
