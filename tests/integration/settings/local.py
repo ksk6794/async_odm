@@ -15,6 +15,11 @@ DATABASES = {
             'tests.integration.test_one_to_one.ProfileTest',
             'tests.integration.test_queryset_fields_defer_only.User',
             'tests.integration.test_queryset_exclude.Profile',
+
+            'tests.integration.test_several_relations.User',
+            'tests.integration.test_several_relations.Post',
+            'tests.integration.test_several_relations.Comment',
+            'tests.integration.test_several_relations.PostData',
         ]
     },
     'test_odm': {

@@ -8,8 +8,8 @@ from collections import namedtuple
 from .queryset import QuerySet
 from .dispatchers import MongoDispatcher
 from core.connection import MongoConnection
-from .fields import Field, BaseRelationField, BaseBackwardRelationField
-from .constants import CREATE, UPDATE
+from .fields import Field, BaseRelationField, BaseBackwardRelationField, _ForeignKeyBackward, _OneToOneBackward
+from .constants import CREATE, UPDATE, CASCADE
 
 WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
 
@@ -248,50 +248,44 @@ class OnDeleteManager:
     def __init__(self, odm_objects):
         self.odm_objects = odm_objects
 
-    @staticmethod
-    def has_backward_relations(odm_object):
-        output = False
-        for field_instance in odm_object.get_declared_fields().values():
-            if isinstance(field_instance, BaseBackwardRelationField):
-                output = True
-                break
+    async def get(self, field_instance):
+        res = await field_instance
+        return res
 
-        return output
-
-    async def set_null(self):
-        # TODO: Move this code section to function-generator
-        for odm_object in self.odm_objects:
-            for field_name, field_instance in odm_object.get_declared_fields().items():
-                if isinstance(field_instance, BaseBackwardRelationField):
-                    bwd_rel = await getattr(odm_object, field_name)
-                    children = bwd_rel if isinstance(bwd_rel, list) else [bwd_rel]
-
-                    for child in children:
-                        # TODO: Find the field by which backward is established and set value null (if possible)
-                        pass
-
-    async def cascade(self, odm_objects=None):
+    async def analyze_backwards(self, odm_objects=None):
         odm_objects = odm_objects if odm_objects is not None else self.odm_objects
-        for_delete = []
+        items = []
 
         for odm_object in odm_objects:
-            item = {
-                'dispatcher': odm_object.get_dispatcher(),
+            data = {
+                'model': odm_object.__class__,
                 'document_id': odm_object.id,
-                'children': None
+                'cascade': [],
             }
 
             for field_name, field_instance in odm_object.get_declared_fields().items():
                 if isinstance(field_instance, BaseBackwardRelationField):
-                    bwd_rel = await getattr(odm_object, field_name)
+                    field_instance = getattr(odm_object, field_name)
+                    relation_declared_fields = field_instance.relation.get_declared_fields()
+                    relation_field_name = field_instance.get_field_name()
+                    relation_field_instance = relation_declared_fields.get(relation_field_name)
 
-                    # TODO: Check if this is MongoModel, not list
-                    children = bwd_rel if isinstance(bwd_rel, list) else [bwd_rel]
-                    item['children'] = await self.cascade(children)
+                    on_delete = relation_field_instance.on_delete
 
-            for_delete.append(item)
+                    if on_delete == CASCADE:
+                        rel_odm_objects = await field_instance
+                        rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
+                        cascade_items = {relation_field_instance: await self.analyze_backwards(rel_odm_objects)}
+                        data['cascade'].append(cascade_items)
 
-        return for_delete
+                    pass
+
+                # elif isinstance(field_instance, _OneToOneBackward):
+                #     pass
+
+            items.append(data)
+
+        return items
 
 
 class MongoModel(metaclass=BaseModel):

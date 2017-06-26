@@ -39,6 +39,9 @@ class Field:
     def set_field_name(self, name):
         self._name = name
 
+    def get_field_name(self):
+        return self._name
+
     def set_field_value(self, value):
         self._value = value
 
