@@ -7,9 +7,9 @@ from .utils import classproperty
 from collections import namedtuple
 from .queryset import QuerySet
 from .dispatchers import MongoDispatcher
-from core.connection import MongoConnection
+from core.connection import MongoConnection, DatabaseManager
 from .fields import Field, BaseRelationField, BaseBackwardRelationField, _ForeignKeyBackward, _OneToOneBackward
-from .constants import CREATE, UPDATE, CASCADE
+from .constants import CREATE, UPDATE, CASCADE, SET_NULL
 
 WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
 
@@ -248,11 +248,7 @@ class OnDeleteManager:
     def __init__(self, odm_objects):
         self.odm_objects = odm_objects
 
-    async def get(self, field_instance):
-        res = await field_instance
-        return res
-
-    async def analyze_backwards(self, odm_objects=None):
+    def analyze_backwards(self, odm_objects=None):
         odm_objects = odm_objects if odm_objects is not None else self.odm_objects
         items = []
 
@@ -261,6 +257,7 @@ class OnDeleteManager:
                 'model': odm_object.__class__,
                 'document_id': odm_object.id,
                 'cascade': [],
+                'set_default': [],
             }
 
             for field_name, field_instance in odm_object.get_declared_fields().items():
@@ -272,16 +269,23 @@ class OnDeleteManager:
 
                     on_delete = relation_field_instance.on_delete
 
+                    connection = field_instance.relation.get_connection()
+                    collection_name = field_instance.relation.get_collection_name()
+
+                    pymongo_db = DatabaseManager().get_database(connection.database).delegate
+                    rel_odm_objects = []
+
+                    for document in getattr(pymongo_db, collection_name).find({'{}.$id'.format(field_instance._name): field_instance._value}):
+                        rel_odm_objects.append(field_instance.relation(**document))
+
+                    rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
+                    i = {relation_field_instance: self.analyze_backwards(rel_odm_objects)}
+
                     if on_delete == CASCADE:
-                        rel_odm_objects = await field_instance
-                        rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
-                        cascade_items = {relation_field_instance: await self.analyze_backwards(rel_odm_objects)}
-                        data['cascade'].append(cascade_items)
+                        data['cascade'].append(i)
 
-                    pass
-
-                # elif isinstance(field_instance, _OneToOneBackward):
-                #     pass
+                    elif on_delete == SET_NULL:
+                        data['set_default'].append(i)
 
             items.append(data)
 

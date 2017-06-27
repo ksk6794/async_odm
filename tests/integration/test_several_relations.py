@@ -57,6 +57,6 @@ class SeveralRelationsTests(BaseAsyncTestCase):
         p_data = await post.data
 
         dm = OnDeleteManager([user])
-        dm_res = await dm.analyze_backwards()
+        dm_res = dm.analyze_backwards()
 
         pass
