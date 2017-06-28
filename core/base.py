@@ -266,10 +266,12 @@ class OnDeleteManager:
                     relation_field_instance = field_instance.relation.get_declared_fields().get(relation_field_name)
 
                     on_delete = relation_field_instance.on_delete
-                    rel_odm_objects = await field_instance
+
+                    # Copy object before await (prevent 'can not reuse awaitable coroutine')
+                    rel_odm_objects = await copy.deepcopy(field_instance)
                     rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
                     children = {
-                        relation_field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
+                        field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
                     }
 
                     data[on_delete].append(children)
@@ -279,23 +281,24 @@ class OnDeleteManager:
         return items
 
     async def delete(self, obj):
-        def _walk(tree, event=None):
+        async def _walk(tree, event=None):
             for item in tree:
                 for key, value in item.items():
                     if isinstance(key, int):
                         event = key
 
                     if isinstance(value, list) and value:
-                        _walk(tree=value, event=event)
+                        await _walk(tree=value, event=event)
 
                         # Remove relationships from depth
                         if isinstance(key, Field) and event in (SET_DEFAULT, SET_NULL, CASCADE, PROTECTED):
+                            res = await key
                             pass
 
                 pass
 
         relationship_tree = await self.analyze_backwards(obj)
-        _walk(tree=relationship_tree)
+        await _walk(tree=relationship_tree)
 
 
 class MongoModel(metaclass=BaseModel):
