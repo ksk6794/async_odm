@@ -291,7 +291,7 @@ class OnDeleteManager:
                         await _walk(tree=value, event=event)
 
                         # Remove relationships from depth
-                        if isinstance(key, Field) and event in (SET_DEFAULT, SET_NULL, CASCADE, PROTECTED):
+                        if isinstance(key, (BaseRelationField, BaseBackwardRelationField)):
                             res = await key
                             pass
 
