@@ -267,7 +267,7 @@ class OnDeleteManager:
 
                     on_delete = relation_field_instance.on_delete
 
-                    # Copy object before await (prevent 'can not reuse awaitable coroutine')
+                    # await the copied object (prevent 'can not reuse awaitable coroutine')
                     rel_odm_objects = await copy.deepcopy(field_instance)
                     rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
                     children = {
