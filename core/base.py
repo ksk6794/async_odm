@@ -2,6 +2,8 @@ import os
 import re
 import asyncio
 import importlib
+
+import copy
 from bson import DBRef
 from .utils import classproperty
 from collections import namedtuple
@@ -9,7 +11,7 @@ from .queryset import QuerySet
 from .dispatchers import MongoDispatcher
 from core.connection import MongoConnection, DatabaseManager
 from .fields import Field, BaseRelationField, BaseBackwardRelationField, _ForeignKeyBackward, _OneToOneBackward
-from .constants import CREATE, UPDATE, CASCADE, SET_NULL
+from .constants import CREATE, UPDATE, CASCADE, SET_NULL, SET_DEFAULT, PROTECTED
 
 WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
 
@@ -245,51 +247,55 @@ class RelationManager:
 
 
 class OnDeleteManager:
-    def __init__(self, odm_objects):
-        self.odm_objects = odm_objects
-
-    def analyze_backwards(self, odm_objects=None):
-        odm_objects = odm_objects if odm_objects is not None else self.odm_objects
+    async def analyze_backwards(self, obj=None, odm_objects=None):
+        odm_objects = odm_objects if odm_objects is not None else [obj]
         items = []
 
         for odm_object in odm_objects:
             data = {
-                'model': odm_object.__class__,
-                'document_id': odm_object.id,
-                'cascade': [],
-                'set_default': [],
+                CASCADE: [],
+                SET_NULL: [],
+                SET_DEFAULT: [],
+                PROTECTED: [],
             }
 
             for field_name, field_instance in odm_object.get_declared_fields().items():
                 if isinstance(field_instance, BaseBackwardRelationField):
                     field_instance = getattr(odm_object, field_name)
-                    relation_declared_fields = field_instance.relation.get_declared_fields()
                     relation_field_name = field_instance.get_field_name()
-                    relation_field_instance = relation_declared_fields.get(relation_field_name)
+                    relation_field_instance = field_instance.relation.get_declared_fields().get(relation_field_name)
 
                     on_delete = relation_field_instance.on_delete
-
-                    connection = field_instance.relation.get_connection()
-                    collection_name = field_instance.relation.get_collection_name()
-
-                    pymongo_db = DatabaseManager().get_database(connection.database).delegate
-                    rel_odm_objects = []
-
-                    for document in getattr(pymongo_db, collection_name).find({'{}.$id'.format(field_instance._name): field_instance._value}):
-                        rel_odm_objects.append(field_instance.relation(**document))
-
+                    rel_odm_objects = await field_instance
                     rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
-                    i = {relation_field_instance: self.analyze_backwards(rel_odm_objects)}
+                    children = {
+                        relation_field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
+                    }
 
-                    if on_delete == CASCADE:
-                        data['cascade'].append(i)
-
-                    elif on_delete == SET_NULL:
-                        data['set_default'].append(i)
+                    data[on_delete].append(children)
 
             items.append(data)
 
         return items
+
+    async def delete(self, obj):
+        def _walk(tree, event=None):
+            for item in tree:
+                for key, value in item.items():
+                    if isinstance(key, int):
+                        event = key
+
+                    if isinstance(value, list) and value:
+                        _walk(tree=value, event=event)
+
+                        # Remove relationships from depth
+                        if isinstance(key, Field) and event in (SET_DEFAULT, SET_NULL, CASCADE, PROTECTED):
+                            pass
+
+                pass
+
+        relationship_tree = await self.analyze_backwards(obj)
+        _walk(tree=relationship_tree)
 
 
 class MongoModel(metaclass=BaseModel):
@@ -378,6 +384,9 @@ class MongoModel(metaclass=BaseModel):
         field_value = None
 
         if isinstance(field_instance, (BaseRelationField, BaseBackwardRelationField)):
+            # Prevent 'can not reuse awaitable coroutine'
+            field_instance = copy.deepcopy(field_instance)
+
             # Set the value with relation object id for a field to provide base relation
             if isinstance(field_instance, BaseRelationField):
                 field_value = object.__getattribute__(self, '__dict__').get(item)

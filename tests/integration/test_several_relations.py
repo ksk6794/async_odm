@@ -1,3 +1,5 @@
+import asyncio
+
 from core.base import MongoModel, OnDeleteManager
 from core.fields import StringField, ForeignKey, OneToOne
 from tests.base import BaseAsyncTestCase
@@ -48,6 +50,7 @@ class SeveralRelationsTests(BaseAsyncTestCase):
     async def test_some(self):
         user = await User.objects.create(username='Ivan')
         post = await Post.objects.create(author=user)
+
         post_data = await PostData.objects.create(post=post, content='content...')
         comment = await Comment.objects.create(post=post, author=user, content='text...')
 
@@ -56,7 +59,6 @@ class SeveralRelationsTests(BaseAsyncTestCase):
         n_comments = await post.comments
         p_data = await post.data
 
-        dm = OnDeleteManager([user])
-        dm_res = dm.analyze_backwards()
-
+        dm = OnDeleteManager()
+        dm_res = await dm.delete(user)
         pass
