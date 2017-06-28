@@ -252,12 +252,7 @@ class OnDeleteManager:
         items = []
 
         for odm_object in odm_objects:
-            data = {
-                CASCADE: [],
-                SET_NULL: [],
-                SET_DEFAULT: [],
-                PROTECTED: [],
-            }
+            data = {}
 
             for field_name, field_instance in odm_object.get_declared_fields().items():
                 if isinstance(field_instance, BaseBackwardRelationField):
@@ -274,6 +269,8 @@ class OnDeleteManager:
                         field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
                     }
 
+                    if on_delete not in data:
+                        data[on_delete] = []
                     data[on_delete].append(children)
 
             items.append(data)
