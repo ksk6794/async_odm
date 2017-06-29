@@ -1,17 +1,18 @@
 import os
 import re
+import copy
 import asyncio
 import importlib
-
-import copy
-from bson import DBRef
-from .utils import classproperty
 from collections import namedtuple
+from bson import DBRef
+
+from core.managers import OnDeleteManager
 from .queryset import QuerySet
+from .utils import classproperty
+from .connection import MongoConnection
 from .dispatchers import MongoDispatcher
-from core.connection import MongoConnection, DatabaseManager
-from .fields import Field, BaseRelationField, BaseBackwardRelationField, _ForeignKeyBackward, _OneToOneBackward
-from .constants import CREATE, UPDATE, CASCADE, SET_NULL, SET_DEFAULT, PROTECTED
+from .constants import UPDATE, CREATE
+from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
 
@@ -246,58 +247,6 @@ class RelationManager:
                 del self._waited_relations[index]
 
 
-class OnDeleteManager:
-    async def analyze_backwards(self, obj=None, odm_objects=None):
-        odm_objects = odm_objects if odm_objects is not None else [obj]
-        items = []
-
-        for odm_object in odm_objects:
-            data = {}
-
-            for field_name, field_instance in odm_object.get_declared_fields().items():
-                if isinstance(field_instance, BaseBackwardRelationField):
-                    field_instance = getattr(odm_object, field_name)
-                    relation_field_name = field_instance.get_field_name()
-                    relation_field_instance = field_instance.relation.get_declared_fields().get(relation_field_name)
-
-                    on_delete = relation_field_instance.on_delete
-
-                    # await the copied object (prevent 'can not reuse awaitable coroutine')
-                    rel_odm_objects = await copy.deepcopy(field_instance)
-                    rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
-                    children = {
-                        field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
-                    }
-
-                    if on_delete not in data:
-                        data[on_delete] = []
-                    data[on_delete].append(children)
-
-            items.append(data)
-
-        return items
-
-    async def delete(self, obj):
-        async def _walk(tree, event=None):
-            for item in tree:
-                for key, value in item.items():
-                    if isinstance(key, int):
-                        event = key
-
-                    if isinstance(value, list) and value:
-                        await _walk(tree=value, event=event)
-
-                        # Remove relationships from depth
-                        if isinstance(key, (BaseRelationField, BaseBackwardRelationField)):
-                            res = await key
-                            pass
-
-                pass
-
-        relationship_tree = await self.analyze_backwards(obj)
-        await _walk(tree=relationship_tree)
-
-
 class MongoModel(metaclass=BaseModel):
     _id = None
     _dispatcher = None
@@ -409,6 +358,16 @@ class MongoModel(metaclass=BaseModel):
     def id(self):
         return self._id
 
+    @classproperty
+    def has_backwards(cls):
+        has_backwards = False
+        for field_instance in cls.get_declared_fields():
+            if isinstance(field_instance, BaseBackwardRelationField):
+                has_backwards = True
+                break
+
+        return has_backwards
+
     @classmethod
     def get_declared_fields(cls):
         return cls._declared_fields
@@ -435,6 +394,12 @@ class MongoModel(metaclass=BaseModel):
         self._action = None
 
     async def delete(self):
+        """
+        If the object to be deleted contains backwards relations, handle them
+        """
+        if self.has_backwards:
+            await OnDeleteManager().handle_backwards([self])
+
         await self._dispatcher.delete_one(self._id)
 
     def get_external_values(self, document):

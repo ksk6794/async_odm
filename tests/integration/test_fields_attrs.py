@@ -17,7 +17,7 @@ class Settings(MongoModel):
 
 
 class Test(MongoModel):
-    param = BoolField(required=True)
+    param = BoolField(null=True)
 
 
 class FieldsAttrsTests(BaseAsyncTestCase):

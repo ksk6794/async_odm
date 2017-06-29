@@ -59,6 +59,5 @@ class SeveralRelationsTests(BaseAsyncTestCase):
         n_comments = await post.comments
         p_data = await post.data
 
-        dm = OnDeleteManager()
-        dm_res = await dm.delete(user)
+        await user.delete()
         pass

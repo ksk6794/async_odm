@@ -7,3 +7,7 @@ CASCADE = 0
 PROTECTED = 1
 SET_NULL = 2
 SET_DEFAULT = 3
+
+# produce variants
+DOCUMENT = 0
+ODM_OBJECT = 1

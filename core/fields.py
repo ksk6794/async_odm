@@ -13,7 +13,7 @@ class Field:
     is_sub_field = False
     _reserved_attributes = {
         'null': bool,
-        'required': bool,
+        'blank': bool,
         'min_length': int,
         'max_length': int,
         'unique': bool,
@@ -41,6 +41,9 @@ class Field:
 
     def get_field_name(self):
         return self._name
+
+    def get_field_value(self):
+        return self._value
 
     def set_field_value(self, value):
         self._value = value
@@ -97,7 +100,7 @@ class Field:
 
     def validate(self, name, value):
         if name:
-            required = getattr(self, 'required', False) or False
+            null = getattr(self, 'null', False) or False
             blank = getattr(self, 'blank', True) or True
             min_length = getattr(self, 'min_length', None)
             max_length = getattr(self, 'max_length', None)
@@ -135,8 +138,8 @@ class Field:
                         raise ValidationError(exception, self.is_sub_field)
 
             else:
-                if required is True and value is None:
-                    exception = 'Field `{field_name}` is required'.format(
+                if null is True and value is None:
+                    exception = 'Field `{field_name}` can not be null'.format(
                         field_name=name
                     )
                     raise ValidationError(exception, self.is_sub_field)
@@ -168,8 +171,8 @@ class Field:
 class BoolField(Field):
     type = bool
 
-    def __init__(self, required=False, default=None, choices=None):
-        self.required = required
+    def __init__(self, null=False, default=None, choices=None):
+        self.null = null
         self.default = default
         self.choices = choices
 
@@ -177,9 +180,9 @@ class BoolField(Field):
 class StringField(Field):
     type = str
 
-    def __init__(self, required=False, blank=True, min_length=None, max_length=None,
+    def __init__(self, null=False, blank=True, min_length=None, max_length=None,
                  unique=False, index=None, default=None, choices=None):
-        self.required = required
+        self.null = null
         self.blank = blank
         self.min_length = min_length
         self.max_length = max_length
@@ -192,8 +195,8 @@ class StringField(Field):
 class IntegerField(Field):
     type = int
 
-    def __init__(self, required=False, unique=False, default=None, choices=None):
-        self.required = required
+    def __init__(self, null=False, unique=False, default=None, choices=None):
+        self.null = null
         self.unique = unique
         self.default = default
         self.choices = choices
@@ -202,8 +205,8 @@ class IntegerField(Field):
 class FloatField(Field):
     type = float
 
-    def __init__(self, required=False, unique=False, default=None, choices=None):
-        self.required = required
+    def __init__(self, null=False, unique=False, default=None, choices=None):
+        self.null = null
         self.unique = unique
         self.default = default
         self.choices = choices
@@ -212,9 +215,9 @@ class FloatField(Field):
 class ListField(Field):
     type = list
 
-    def __init__(self, base_field=None, required=False, length=None, unique=False, default=None):
+    def __init__(self, base_field=None, null=False, length=None, unique=False, default=None):
         self.base_field = base_field
-        self.required = required
+        self.null = null
         self.length = length
         self.unique = unique
         self.default = default
@@ -238,8 +241,8 @@ class ListField(Field):
 class DictField(Field):
     type = dict
 
-    def __init__(self, required=False, unique=False, min_length=None, max_length=None, default=None):
-        self.required = required
+    def __init__(self, null=False, unique=False, min_length=None, max_length=None, default=None):
+        self.null = null
         self.unique = unique
         self.min_length = min_length
         self.max_length = max_length
@@ -253,9 +256,8 @@ class DictField(Field):
 class DateTimeField(Field):
     type = datetime
 
-    # TODO: Tests for auto_now_*
-    def __init__(self, required=False, auto_now_create=False, auto_now_update=False):
-        self.required = required
+    def __init__(self, null=False, auto_now_create=False, auto_now_update=False):
+        self.null = null
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
 
@@ -272,10 +274,10 @@ class BaseRelationField(Field):
     backward_class = None
     _query = None
 
-    def __init__(self, relation, related_name=None, required=False, on_delete=None):
+    def __init__(self, relation, related_name=None, null=False, on_delete=None):
         self.relation = relation
         self.related_name = related_name
-        self.required = required
+        self.null = null
         self.on_delete = on_delete
 
     def __aiter__(self):
@@ -297,7 +299,7 @@ class BaseRelationField(Field):
 class BaseBackwardRelationField(Field):
     _query = None
 
-    def _get_query(self):
+    def get_query(self):
         raise NotImplementedError
 
     def __init__(self, relation):
@@ -307,16 +309,16 @@ class BaseBackwardRelationField(Field):
         return self
 
     async def __anext__(self):
-        async for item in self._get_query():
+        async for item in self.get_query():
             return item
         raise StopAsyncIteration()
 
     def __await__(self):
-        return self._get_query().__await__()
+        return self.get_query().__await__()
 
 
-class _ForeignKeyBackward(BaseBackwardRelationField):
-    def _get_query(self):
+class ForeignKeyBackward(BaseBackwardRelationField):
+    def get_query(self):
         if not self._query:
             filter_kwargs = {self._name: self._value}
             self._query = self.relation.objects.filter(**filter_kwargs)
@@ -324,8 +326,8 @@ class _ForeignKeyBackward(BaseBackwardRelationField):
         return self._query
 
 
-class _OneToOneBackward(BaseBackwardRelationField):
-    def _get_query(self):
+class OneToOneBackward(BaseBackwardRelationField):
+    def get_query(self):
         if not self._query:
             filter_kwargs = {self._name: self._value}
             self._query = self.relation.objects.get(**filter_kwargs)
@@ -334,7 +336,7 @@ class _OneToOneBackward(BaseBackwardRelationField):
 
 
 class ForeignKey(BaseRelationField):
-    backward_class = _ForeignKeyBackward
+    backward_class = ForeignKeyBackward
 
     def _get_query(self):
         if not self._query:
@@ -345,7 +347,7 @@ class ForeignKey(BaseRelationField):
 
 
 class OneToOne(BaseRelationField):
-    backward_class = _OneToOneBackward
+    backward_class = OneToOneBackward
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

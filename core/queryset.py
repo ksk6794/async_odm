@@ -47,15 +47,21 @@ class QuerySet:
 
         return self
 
-    # TODO: Test it!
     def raw_query(self, raw_query):
         if isinstance(raw_query, dict):
             update(self._find, raw_query)
         return self
 
-    # TODO: Test it!
     async def delete(self):
-        result = await self.model.get_dispatcher().delete_many(**self._find)
+        result = None
+
+        if not self.model.has_backwards:
+            result = await self.model.get_dispatcher().delete_many(**self._find)
+        else:
+            async for document in await self.cursor:
+                odm_object = self._to_object(document)
+                await odm_object.delete()
+
         return result
 
     async def count(self):
@@ -98,10 +104,10 @@ class QuerySet:
         documents = []
 
         for index, document in enumerate(args):
-            field_value = await document.get_internal_values()
+            internal_values = await document.get_internal_values()
 
             # Wrap each document with InsertOne
-            document = InsertOne(field_value)
+            document = InsertOne(internal_values)
             documents.append(document)
 
         await self.model.get_dispatcher().bulk_create(documents)
