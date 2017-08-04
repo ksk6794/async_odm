@@ -400,6 +400,7 @@ class MongoModel(metaclass=BaseModel):
         if self.has_backwards:
             await OnDeleteManager().handle_backwards([self])
 
+        # TODO: All calls to the dispatcher must occur through QuerySet
         await self._dispatcher.delete_one(self._id)
 
     def get_external_values(self, document):
@@ -454,6 +455,8 @@ class MongoModel(metaclass=BaseModel):
         """
         self._action = CREATE
         field_values = await self.get_internal_values()
+
+        # TODO: All calls to the dispatcher must occur through QuerySet
         insert_result = await self._dispatcher.create(**field_values)
 
         # Generate document from field_values and inserted_id
@@ -469,6 +472,7 @@ class MongoModel(metaclass=BaseModel):
         """
         self._action = UPDATE
         field_values = await self.get_internal_values()
+        # TODO: All calls to the dispatcher must occur through QuerySet
         document = await self._dispatcher.update_one(self._id, **field_values)
         document = self.get_external_values(document)
 
