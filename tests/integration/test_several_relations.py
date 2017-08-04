@@ -52,7 +52,9 @@ class SeveralRelationsTests(BaseAsyncTestCase):
         post = await Post.objects.create(author=user)
 
         post_data = await PostData.objects.create(post=post, content='content...')
-        comment = await Comment.objects.create(post=post, author=user, content='text...')
+        comment = Comment.objects.create(post=post, author=user, content='text...')
+
+        comments = Comment.objects.all()
 
         n_author = await post.author
         u_comments = await n_author.comments

@@ -45,6 +45,7 @@ class OnDeleteManager:
 
     @staticmethod
     async def on_set_default(field_instance):
+        # TODO: Implement setting the default value
         pass
 
     async def analyze_backwards(self, obj=None, odm_objects=None):
