@@ -93,9 +93,9 @@ class MongoDispatcher:
 
         return cursor
 
-    async def delete_one(self, _id):
+    async def delete_one(self, **kwargs):
         collection = await self.get_collection()
-        result = await collection.delete_one(filter={'_id': _id})
+        result = await collection.delete_one(filter=kwargs)
         return result
 
     async def delete_many(self, **kwargs):

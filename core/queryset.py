@@ -52,6 +52,10 @@ class QuerySet:
             update(self._find, raw_query)
         return self
 
+    async def delete_one(self, **kwargs):
+        res = await self.model.get_dispatcher().delete_one(**kwargs)
+        return res
+
     async def delete(self):
         result = None
 
@@ -68,10 +72,18 @@ class QuerySet:
         result = await self.model.get_dispatcher().count(**self._find)
         return result
 
+    async def insert_document(self, **kwargs):
+        insert_result = await self.model.get_dispatcher().create(**kwargs)
+        return insert_result
+
     async def create(self, **kwargs):
         document = self.model(**kwargs)
         await document.save()
         return document
+
+    async def update_one(self, document_id, **kwargs):
+        result = await self.model.get_dispatcher().update_one(document_id, **kwargs)
+        return result
 
     async def update(self, **kwargs):
         result = await self.model.get_dispatcher().update_many(self._find, **kwargs)
