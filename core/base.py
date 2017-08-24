@@ -418,6 +418,8 @@ class MongoModel(metaclass=BaseModel):
             await OnDeleteManager().handle_backwards([self])
 
         await self.objects.internal_query.delete_one(_id=self._id)
+
+        # Remove document id from the ODM object
         self._id = None
 
     def get_external_values(self, document):
