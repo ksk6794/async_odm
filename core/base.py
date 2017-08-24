@@ -402,7 +402,7 @@ class MongoModel(metaclass=BaseModel):
 
         # TODO: Remove id from current ODM-object
 
-        await self.objects.delete_one(_id=self._id)
+        await self.objects.internal_query.delete_one(_id=self._id)
 
     def get_external_values(self, document):
         """
@@ -456,7 +456,7 @@ class MongoModel(metaclass=BaseModel):
         """
         self._action = CREATE
         field_values = await self.get_internal_values()
-        insert_result = await self.objects.insert_document(**field_values)
+        insert_result = await self.objects.internal_query.insert_document(**field_values)
 
         # Generate document from field_values and inserted_id
         field_values.update({'_id': insert_result.inserted_id})
@@ -471,7 +471,7 @@ class MongoModel(metaclass=BaseModel):
         """
         self._action = UPDATE
         field_values = await self.get_internal_values()
-        document = await self.objects.update_one(self._id, **field_values)
+        document = await self.objects.internal_query.update_one(self._id, **field_values)
         document = self.get_external_values(document)
 
         return document
