@@ -91,7 +91,8 @@ class QueryCompilerVisitor(QNodeVisitor):
             if self.delimiter in field_name:
                 field_name, operator = field_name.split(self.delimiter, 1)
 
-            field_instance = manager.model.get_declared_fields().get(field_name)
+            declared_fields = manager.model.get_declared_fields()
+            field_instance = declared_fields.get(field_name)
             operator = 'base' if not operator else operator
             operator = 'rel' if isinstance(field_instance, BaseRelationField) else operator
 

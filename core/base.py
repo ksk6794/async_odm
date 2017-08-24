@@ -14,10 +14,18 @@ from .dispatchers import MongoDispatcher
 from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
-WaitedRelation = namedtuple('WaitedRelation', ['field_name', 'field_instance', 'model_name'])
+WaitedRelation = namedtuple('WaitedRelation', [
+    'field_name', 'field_instance', 'model_name'
+])
+ModelManagement = namedtuple('ModelManagement', [
+    'collection_name', 'connection', 'dispatcher', 'sorting', 'declared_fields'
+])
 
 
 class BaseModel(type):
+    _collection_name = None
+    _connection = None
+
     """
     Metaclass for all models.
     """
@@ -26,11 +34,13 @@ class BaseModel(type):
 
     def __new__(mcs, name, bases, attrs):
         if name != 'MongoModel':
-            attrs['_collection_name'] = mcs._get_collection_name(name, attrs)
-            attrs['_connection'] = mcs._get_connection(name, attrs)
-            attrs['_dispatcher'] = mcs._get_dispatcher(attrs)
-            attrs['_sorting'] = mcs._get_sorting(attrs)
-            attrs['_declared_fields'] = mcs._get_declared_fields(attrs)
+            attrs['_management'] = ModelManagement(
+                collection_name=mcs._get_collection_name(name, attrs),
+                connection=mcs._get_connection(name, attrs),
+                dispatcher=mcs._get_dispatcher(attrs),
+                sorting=mcs._get_sorting(attrs),
+                declared_fields=mcs._get_declared_fields(attrs),
+            )
 
         model = super().__new__(mcs, name, bases, attrs)
         RelationManager().add_model(model)
@@ -72,6 +82,7 @@ class BaseModel(type):
             database=db_name
         )
 
+        mcs._connection = connection
         return connection
 
     @classmethod
@@ -106,6 +117,7 @@ class BaseModel(type):
                     )
                 )
 
+        mcs._collection_name = collection_name
         return collection_name
 
     @classmethod
@@ -115,9 +127,8 @@ class BaseModel(type):
         :param attrs: list - class attributes
         :return: MongoDispatcher instance
         """
-        connection = attrs.get('_connection')
-        collection_name = attrs.get('_collection_name')
-        return MongoDispatcher(connection, collection_name)
+        connection = mcs._connection
+        return MongoDispatcher(connection, mcs._collection_name)
 
     @classmethod
     def _get_sorting(mcs, attrs):
@@ -183,7 +194,9 @@ class RelationManager:
         return self._models
 
     def _process_relations(self, model):
-        for field_name, field_instance in model.get_declared_fields().items():
+        declared_fields = model.get_declared_fields()
+
+        for field_name, field_instance in declared_fields.items():
             if isinstance(field_instance, BaseRelationField):
                 relation = field_instance.relation
 
@@ -229,7 +242,7 @@ class RelationManager:
         backward_relation._name = field_name
 
         # Add backward relation by related_name argument
-        declared_fields = getattr(rel_model, '_declared_fields')
+        declared_fields = rel_model.get_declared_fields()
         declared_fields[related_name] = backward_relation
 
     def _handle_waited_relations(self):
@@ -249,11 +262,7 @@ class RelationManager:
 
 class MongoModel(metaclass=BaseModel):
     _id = None
-    _dispatcher = None
-    _collection_name = None
-    _connection = None
-    _declared_fields = None
-    _sorting = None
+    _management = None
 
     # Stores the current action (save/update) for field validation
     _action = None
@@ -265,7 +274,9 @@ class MongoModel(metaclass=BaseModel):
 
         # Save fields not declared in the model.
         for field_name, field_value in document.items():
-            if field_name not in self.get_declared_fields() and field_name != '_id':
+            declared_fields = self.get_declared_fields()
+
+            if field_name not in declared_fields and field_name != '_id':
                 self._undeclared_fields[field_name] = field_value
 
         if '_id' in document:
@@ -282,7 +293,9 @@ class MongoModel(metaclass=BaseModel):
     def __setattr__(self, key, value):
         # Ignore private properties
         if not key.startswith('_'):
-            if key not in self._declared_fields:
+            declared_fields = self.get_declared_fields()
+
+            if key not in declared_fields:
                 self._undeclared_fields[key] = value
             self._modified_fields.append(key)
         super().__setattr__(key, value)
@@ -328,7 +341,7 @@ class MongoModel(metaclass=BaseModel):
 
     def __getattribute__(self, item):
         attr = super().__getattribute__(item)
-        declared_fields = object.__getattribute__(self, '_declared_fields')
+        declared_fields = object.__getattribute__(self, '_get_management_param')('declared_fields')
         field_instance = declared_fields.get(item)
         field_value = None
 
@@ -370,23 +383,27 @@ class MongoModel(metaclass=BaseModel):
 
     @classmethod
     def get_declared_fields(cls):
-        return cls._declared_fields
+        return cls._get_management_param('declared_fields')
 
     @classmethod
     def get_dispatcher(cls):
-        return cls._dispatcher
+        return cls._get_management_param('dispatcher')
 
     @classmethod
     def get_collection_name(cls):
-        return cls._collection_name
+        return cls._get_management_param('collection_name')
 
     @classmethod
     def get_connection(cls):
-        return cls._connection
+        return cls._get_management_param('connection')
 
     @classmethod
     def get_sorting(cls):
-        return cls._sorting
+        return cls._get_management_param('sorting')
+
+    @classmethod
+    def _get_management_param(cls, param):
+        return getattr(cls._management, param, None)
 
     async def save(self):
         document = await self._update() if self._id else await self._create()
@@ -400,9 +417,8 @@ class MongoModel(metaclass=BaseModel):
         if self.has_backwards:
             await OnDeleteManager().handle_backwards([self])
 
-        # TODO: Remove id from current ODM-object
-
         await self.objects.internal_query.delete_one(_id=self._id)
+        self._id = None
 
     def get_external_values(self, document):
         """

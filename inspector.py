@@ -103,7 +103,7 @@ class Inspector:
 
     @staticmethod
     def has_declared_fields(obj):
-        return hasattr(obj, 'get_declared_fields') and obj.get_declared_fields()
+        return bool(obj.get_declared_fields())
 
     def get_modules(self):
         # Recursive walk by project directory
@@ -117,8 +117,7 @@ class Inspector:
         for module_object in self.get_modules():
             for name, obj in module_object.__dict__.copy().items():
                 if self.is_odm_model(obj) and self.has_declared_fields(obj):
-                    model = obj
-                    yield model
+                    yield obj
 
     async def process_models(self):
         for model in self.get_odm_models():
