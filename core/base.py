@@ -269,8 +269,11 @@ class MongoModel(metaclass=BaseModel):
             )
 
     def __getattribute__(self, item):
+        def __getattribute(obj, attribute):
+            return object.__getattribute__(obj, attribute)
+
         attr = super().__getattribute__(item)
-        declared_fields = object.__getattribute__(self, '_get_management_param')('declared_fields')
+        declared_fields = __getattribute(self, '_management').declared_fields
         field_instance = declared_fields.get(item)
         field_value = None
 
@@ -280,12 +283,12 @@ class MongoModel(metaclass=BaseModel):
 
             # Set the value with relation object id for a field to provide base relation
             if isinstance(field_instance, BaseRelationField):
-                field_value = object.__getattribute__(self, '__dict__').get(item)
+                field_value = __getattribute(self, '__dict__').get(item)
 
             # Set the _id of the current object as a value
             # provide backward relationship for relation fields
             elif isinstance(field_instance, BaseBackwardRelationField):
-                field_value = object.__getattribute__(self, '_id')
+                field_value = __getattribute(self, '_id')
 
             field_instance.set_field_value(field_value)
             attr = field_instance
