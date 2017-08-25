@@ -6,7 +6,7 @@ import importlib
 from collections import namedtuple
 from bson import DBRef
 
-from core.managers import OnDeleteManager
+from core.managers import OnDeleteManager, RelationManager
 from .queryset import QuerySet
 from .utils import classproperty
 from .connection import MongoConnection
@@ -14,9 +14,7 @@ from .dispatchers import MongoDispatcher
 from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
-WaitedRelation = namedtuple('WaitedRelation', [
-    'field_name', 'field_instance', 'model_name'
-])
+
 ModelManagement = namedtuple('ModelManagement', [
     'collection_name', 'connection', 'dispatcher', 'sorting', 'declared_fields'
 ])
@@ -53,6 +51,11 @@ class BaseModel(type):
 
     @classmethod
     def _get_models_list(mcs, models):
+        """
+        Join each model name to the path.
+        :param models: dict - {'module_path': 'model_name'}
+        :return: list - list of models with full path
+        """
         models_list = []
 
         for path, models in models.items():
@@ -63,6 +66,12 @@ class BaseModel(type):
 
     @classmethod
     def _get_db_settings(mcs, name, attrs):
+        """
+        Get current model settings from the settings module.
+        :param name: str - model name
+        :param attrs: list - class attributes
+        :return: tuple - database name, database settings
+        """
         model = mcs._get_model_module(name, attrs)
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
 
@@ -86,6 +95,12 @@ class BaseModel(type):
 
     @classmethod
     def _get_connection(mcs, name, attrs):
+        """
+        Get the settings and connect to the database.
+        :param name: str - collection name
+        :param attrs: list - class attributes
+        :return: MongoConnection instance
+        """
         db_name, db_settings = mcs._get_db_settings(name, attrs)
         connection = MongoConnection(
             host=db_settings.get('host'),
@@ -99,7 +114,7 @@ class BaseModel(type):
     @classmethod
     def _get_collection_name(mcs, name, attrs):
         """
-        Get the collection name or generate it by the collection name.
+        Get the collection name or generate it by the model name.
         :param name: str - collection name
         :param attrs: list - class attributes
         :return: str - collection name
@@ -143,6 +158,11 @@ class BaseModel(type):
 
     @classmethod
     def _get_sorting(mcs, attrs):
+        """
+        Get sorting attribute from the Meta.
+        :param attrs: list - class attributes
+        :return: tuple - list of field names
+        """
         meta = attrs.get('Meta')
         return getattr(meta, 'sorting', ())
 
@@ -167,108 +187,6 @@ class BaseModel(type):
                 attrs.pop(field_name)
 
         return declared_fields
-
-
-class RelationManager:
-    """
-    The singleton manager that organize the relations of models.
-    """
-    _instance = None
-    _models = {}
-    _waited_relations = []
-
-    def __new__(cls):
-        if not cls._instance:
-            cls._instance = object.__new__(cls)
-        return cls._instance
-
-    def add_model(self, model):
-        """
-        Add the model to the list to implement the relations between another models.
-        Model names can not be duplicated.
-        :param model: MongoModel instance
-        :return: void
-        """
-        name = '.'.join((model.__module__, model.__name__))
-
-        if model.__name__ is not 'MongoModel':
-            self._models[name] = model
-            self._process_relations(model)
-
-            if self._waited_relations:
-                self._handle_waited_relations()
-
-    def get_model(self, model_name):
-        return self._models.get(model_name)
-
-    def get_models(self):
-        return self._models
-
-    def _process_relations(self, model):
-        declared_fields = model.get_declared_fields()
-
-        for field_name, field_instance in declared_fields.items():
-            if isinstance(field_instance, BaseRelationField):
-                relation = field_instance.relation
-
-                # Get a relationship model
-                if isinstance(relation, BaseModel):
-                    rel_model = relation
-
-                elif isinstance(relation, str):
-                    if '.' not in relation:
-                        relation = '.'.join((model.__module__, relation))
-                        field_instance.relation = relation
-
-                    rel_model = self.get_model(relation)
-
-                else:
-                    exception = 'Wrong relation type! ' \
-                                'You should specify the model class ' \
-                                'or str with name of class model.'
-                    raise Exception(exception)
-
-                # If the model is not yet registered
-                if rel_model:
-                    self._handle_relation(field_name, field_instance, rel_model, model)
-                else:
-                    # Add model to the waiting list
-                    waited_relation = WaitedRelation(
-                        field_name=field_name,
-                        field_instance=field_instance,
-                        model_name='.'.join([model.__module__, model.__name__])
-                    )
-                    self._waited_relations.append(waited_relation)
-
-    @staticmethod
-    def _handle_relation(field_name, field_instance, rel_model, model):
-        # The model referred to by the current model
-        field_instance.relation = rel_model
-
-        # If the parameter `related_name` is not specified - (collection name)_set
-        related_name = field_instance.related_name or '{}_set'.format(model.get_collection_name())
-
-        # Add a field to retrieve referring objects to the current object
-        backward_relation = field_instance.backward_class(model)
-        backward_relation._name = field_name
-
-        # Add backward relation by related_name argument
-        declared_fields = rel_model.get_declared_fields()
-        declared_fields[related_name] = backward_relation
-
-    def _handle_waited_relations(self):
-        for waited_relation in self._waited_relations:
-            field_name = waited_relation.field_name
-            field_instance = waited_relation.field_instance
-            model_name = waited_relation.model_name
-
-            model = self.get_model(model_name)
-            rel_model = self.get_model(field_instance.relation)
-
-            if rel_model:
-                self._handle_relation(field_name, field_instance, rel_model, model)
-                index = self._waited_relations.index(waited_relation)
-                del self._waited_relations[index]
 
 
 class MongoModel(metaclass=BaseModel):
