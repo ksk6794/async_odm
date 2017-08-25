@@ -7,7 +7,7 @@ class InternalQuery:
     def __init__(self, queryset):
         self.queryset = queryset
 
-    async def insert_document(self, **kwargs):
+    async def create_one(self, **kwargs):
         insert_result = await self.queryset.model.get_dispatcher().create(**kwargs)
         return insert_result
 

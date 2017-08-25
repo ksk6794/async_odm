@@ -52,6 +52,16 @@ class BaseModel(type):
         return '.'.join((attrs.get('__module__'), name))
 
     @classmethod
+    def _get_models_list(mcs, models):
+        models_list = []
+
+        for path, models in models.items():
+            for model in models:
+                models_list.append('.'.join([path, model]))
+
+        return models_list
+
+    @classmethod
     def _get_db_settings(mcs, name, attrs):
         model = mcs._get_model_module(name, attrs)
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
@@ -63,8 +73,11 @@ class BaseModel(type):
         db_name, db_settings = None, None
 
         for db_name, db_settings in settings.DATABASES.items():
-            if model in db_settings.get('models'):
+            models = db_settings.get('models')
+
+            if model in mcs._get_models_list(models):
                 break
+
             db_name, db_settings = None, None
 
         if not (db_name or db_settings):
@@ -474,7 +487,7 @@ class MongoModel(metaclass=BaseModel):
         """
         self._action = CREATE
         field_values = await self.get_internal_values()
-        insert_result = await self.objects.internal_query.insert_document(**field_values)
+        insert_result = await self.objects.internal_query.create_one(**field_values)
 
         # Generate document from field_values and inserted_id
         field_values.update({'_id': insert_result.inserted_id})
