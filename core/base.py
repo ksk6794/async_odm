@@ -78,8 +78,6 @@ class BaseModel(type):
             if model in mcs._get_models_list(models):
                 break
 
-            db_name, db_settings = None, None
-
         if not (db_name or db_settings):
             exception = 'There is no database configuration for the \'{}\' model'
             raise Exception(exception.format(model))
