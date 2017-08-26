@@ -3,7 +3,7 @@ DATABASES = {
         'host': 'localhost',
         'port': 27017,
         'models': {
-            'tests.models': ['Post', 'Name'],
+            'tests.models': ['Post', 'Name', 'Test', 'Test2'],
             'tests.integration.models': ['Profile'],
             'tests.integration.test_fields_attrs': ['Test', 'Settings'],
             'tests.integration.test_fields_types': ['User', 'TestDT'],

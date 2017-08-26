@@ -31,19 +31,26 @@ class BaseModel(type):
         super().__init__(*args, **kwargs)
 
     def __new__(mcs, name, bases, attrs):
-        if name != 'MongoModel':
+        # If it is not MongoModel
+        if bases:
             attrs['_management'] = ModelManagement(
                 collection_name=mcs._get_collection_name(name, attrs),
                 connection=mcs._get_connection(name, attrs),
-                dispatcher=mcs._get_dispatcher(attrs),
+                dispatcher=mcs._get_dispatcher(),
                 sorting=mcs._get_sorting(attrs),
-                declared_fields=mcs._get_declared_fields(attrs),
+                declared_fields=mcs._get_declared_fields(bases, attrs),
             )
 
         model = super().__new__(mcs, name, bases, attrs)
-        RelationManager().add_model(model)
+
+        if not mcs._is_abstract(attrs):
+            RelationManager().add_model(model)
 
         return model
+
+    @classmethod
+    def _is_abstract(mcs, attrs):
+        return bool(getattr(attrs.get('Meta'), 'abstract', None))
 
     @classmethod
     def _get_model_module(mcs, name, attrs):
@@ -147,7 +154,7 @@ class BaseModel(type):
         return collection_name
 
     @classmethod
-    def _get_dispatcher(mcs, attrs):
+    def _get_dispatcher(mcs):
         """
         Get the dispatcher - the driver that organizes queries to the database.
         :param attrs: list - class attributes
@@ -167,7 +174,7 @@ class BaseModel(type):
         return getattr(meta, 'sorting', ())
 
     @classmethod
-    def _get_declared_fields(mcs, attrs):
+    def _get_declared_fields(mcs, bases, attrs):
         """
         Get the collection fields, declared by the user when designing the model.
         :param attrs: list - class attributes
@@ -185,6 +192,11 @@ class BaseModel(type):
 
                 declared_fields[field_name] = field_instance
                 attrs.pop(field_name)
+
+        # Inherit the declared fields of an abstract model
+        for base in bases:
+            if base is not MongoModel:
+                declared_fields.update(base.get_declared_fields())
 
         return declared_fields
 
