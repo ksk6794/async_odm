@@ -16,7 +16,7 @@ from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 
 ModelManagement = namedtuple('ModelManagement', [
-    'dispatcher', 'sorting', 'declared_fields'
+    'declared_fields', 'dispatcher', 'sorting'
 ])
 
 
@@ -31,9 +31,9 @@ class BaseModel(type):
         # If it is not MongoModel
         if bases:
             attrs['_management'] = ModelManagement(
+                declared_fields=mcs._get_declared_fields(bases, attrs),
                 dispatcher=mcs._get_dispatcher(name, attrs),
                 sorting=mcs._get_sorting(attrs),
-                declared_fields=mcs._get_declared_fields(bases, attrs),
             )
 
         model = super().__new__(mcs, name, bases, attrs)
@@ -78,7 +78,9 @@ class BaseModel(type):
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
 
         if not settings_module:
-            raise ImportError('Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.')
+            raise ImportError(
+                'Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.'
+            )
 
         settings = importlib.import_module(settings_module)
         db_name, db_settings = None, None
@@ -92,8 +94,9 @@ class BaseModel(type):
             db_name, db_settings = None, None
 
         if not (db_name or db_settings):
-            exception = 'There is no database configuration for the \'{}\' model'
-            raise Exception(exception.format(model))
+            raise Exception(
+                'There is no database configuration for the \'{}\' model'.format(model)
+            )
 
         return db_name, db_settings
 
@@ -117,26 +120,22 @@ class BaseModel(type):
     @classmethod
     def _get_collection_name(mcs, name, attrs):
         """
-        Get the collection name or generate it by the model name.
+        Get the collection name or generate it by the model class name.
         :param name: str - collection name
         :param attrs: list - class attributes
         :return: str - collection name
         """
-        meta = attrs.get('Meta')
-        collection_name = getattr(
-            meta,
-            'collection_name',
-            '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
-        )
+        auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
+        collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
 
         # Ensure that collection names do not match within the current database
         db_name = mcs._get_connection(name, attrs).database
 
         for model_name, model in RelationManager().get_models().items():
-            reg_db_name = model.get_connection().database
-            reg_collection_name = model.get_collection_name()
+            init_db_name = model.get_connection().database
+            init_collection_name = model.get_collection_name()
 
-            if collection_name == reg_collection_name and db_name == reg_db_name:
+            if collection_name == init_collection_name and db_name == init_db_name:
                 raise ValueError(
                     'The collection name `{collection_name}` already used by `{model_name}` model. '
                     'Please, specify a unique collection_name manually for {cur_model}.'.format(
@@ -450,13 +449,13 @@ class MongoModel(metaclass=BaseModel):
 
         # For consistency check if exist related object in the database
         if not await field_instance.relation.objects.filter(_id=document_id).count():
-            exception = 'Relation document with ObjectId(\'{document_id}\') does not exist.\n' \
-                        'Model: \'{model_name}\', Field: \'{field_name}\''.format(
-                            document_id=str(document_id),
-                            model_name=self.__class__.__name__,
-                            field_name=field_name
-                        )
-            raise ValueError(exception)
+            raise ValueError(
+                'Relation document with ObjectId(\'{document_id}\') does not exist.\n'
+                'Model: \'{model_name}\', Field: \'{field_name}\''.format(
+                    document_id=str(document_id),
+                    model_name=self.__class__.__name__,
+                    field_name=field_name
+                ))
 
         field_value = DBRef(collection_name, document_id)
 
