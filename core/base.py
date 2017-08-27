@@ -127,15 +127,19 @@ class BaseModel(type):
         """
         auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
         collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
-
-        # Ensure that collection names do not match within the current database
         db_name = mcs._get_connection(name, attrs).database
 
-        for model_name, model in RelationManager().get_models().items():
+        models = RelationManager().get_models()
+
+        for model_name, model in models.items():
             init_db_name = model.get_connection().database
             init_collection_name = model.get_collection_name()
 
-            if collection_name == init_collection_name and db_name == init_db_name:
+            # Ensure that collection names do not match within the current database
+            current = collection_name, db_name
+            initial = init_collection_name, init_db_name
+
+            if current == initial:
                 raise ValueError(
                     'The collection name `{collection_name}` already used by `{model_name}` model. '
                     'Please, specify a unique collection_name manually for {cur_model}.'.format(
@@ -184,10 +188,11 @@ class BaseModel(type):
         for field_name, field_instance in attrs.copy().items():
             if isinstance(field_instance, Field):
                 if '__' in field_name:
-                    exception = 'You can not use `__` in the field name {field_name}'.format(
-                        field_name=field_name
+                    raise AttributeError(
+                        'You can not use `__` in the field name {field_name}'.format(
+                            field_name=field_name
+                        )
                     )
-                    raise AttributeError(exception)
 
                 declared_fields[field_name] = field_instance
                 attrs.pop(field_name)
@@ -487,11 +492,11 @@ class MongoModel(metaclass=BaseModel):
         :return: validated data
         """
         new_value = None
-        validate_method = getattr(self, 'validate_{}'.format(field_name), None)
+        method = getattr(self, 'validate_{}'.format(field_name), None)
 
-        if callable(validate_method):
+        if callable(method):
             value = self.__dict__.get(field_name)
-            is_coroutine = asyncio.iscoroutinefunction(validate_method)
-            new_value = await validate_method(value=value) if is_coroutine else validate_method(value=value)
+            is_coro = asyncio.iscoroutinefunction(method)
+            new_value = await method(value=value) if is_coro else method(value=value)
 
         return new_value
