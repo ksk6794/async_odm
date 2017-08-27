@@ -1,5 +1,5 @@
 from core.base import MongoModel
-from core.fields import StringField, OneToOne, ForeignKey
+from core.fields import StringField, OneToOne
 from tests.base import BaseAsyncTestCase
 
 

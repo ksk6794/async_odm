@@ -1,3 +1,4 @@
+import importlib
 from unittest.mock import MagicMock
 import asyncio
 import unittest
@@ -24,6 +25,10 @@ class BaseAsyncTestCase(unittest.TestCase):
     def __getattribute__(self, item):
         attr = object.__getattribute__(self, item)
         if asyncio.iscoroutinefunction(attr):
+            # TODO: Find all the models in the current test and replace the name of the database.
+            # TODO: Save the models to the list and delete the database after the test is completed.
+            # importlib.import_module(self.__module__)
+
             if item not in self._function_cache:
                 self._function_cache[item] = self.coroutine_function_decorator(attr)
             return self._function_cache[item]

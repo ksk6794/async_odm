@@ -15,9 +15,7 @@ from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 
-ModelManagement = namedtuple('ModelManagement', [
-    'declared_fields', 'dispatcher', 'sorting'
-])
+ModelManagement = namedtuple('ModelManagement', ['declared_fields', 'dispatcher', 'sorting'])
 
 
 class BaseModel(type):
@@ -476,6 +474,8 @@ class MongoModel(metaclass=BaseModel):
         # Call Model child (custom) validate methods
         new_value = await self._child_validator(field_name)
 
+        # TODO: Check if the validator returns a value of another type.
+
         # Set the post validate value
         if new_value is not None:
             field_value = new_value
@@ -492,11 +492,11 @@ class MongoModel(metaclass=BaseModel):
         :return: validated data
         """
         new_value = None
-        method = getattr(self, 'validate_{}'.format(field_name), None)
+        validator = getattr(self, 'validate_{}'.format(field_name), None)
 
-        if callable(method):
+        if callable(validator):
             value = self.__dict__.get(field_name)
-            is_coro = asyncio.iscoroutinefunction(method)
-            new_value = await method(value=value) if is_coro else method(value=value)
+            is_coro = asyncio.iscoroutinefunction(validator)
+            new_value = await validator(value=value) if is_coro else validator(value=value)
 
         return new_value
