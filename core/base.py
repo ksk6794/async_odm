@@ -243,41 +243,42 @@ class MongoModel(metaclass=BaseModel):
     def __getattr__(self, item):
         match = re.match('get_(?P<field_name>\w+)_display', item)
 
-        if match:
-            field_name = match.group('field_name')
-            declared_fields = self.get_declared_fields()
-
-            if field_name in declared_fields:
-                field_instance = declared_fields.get(field_name)
-                choices = getattr(field_instance, 'choices', None)
-
-                if choices:
-                    # Closure is used to make get_FOO_display callable
-                    def _func():
-                        field_value = self.__dict__.get(field_name)
-                        display = field_instance.get_choice_value(field_value)
-                        return display
-                    return _func
-
-                else:
-                    raise AttributeError(
-                        'Field \'{field_name}\' has not attribute \'choices\''.format(
-                            field_name=field_name
-                        )
-                    )
-            else:
-                raise AttributeError(
-                    'Field \'{field_name}\' is not declared'.format(
-                        field_name=field_name
-                    )
-                )
-        else:
+        if not match:
             raise AttributeError(
                 '\'{model_name}\' model has no attribute \'{attribute}\''.format(
                     model_name=self.__class__.__name__,
                     attribute=item
                 )
             )
+
+        field_name = match.group('field_name')
+        declared_fields = self.get_declared_fields()
+
+        if field_name not in declared_fields:
+            raise AttributeError(
+                'Field \'{field_name}\' is not declared'.format(
+                    field_name=field_name
+                )
+            )
+
+        field_instance = declared_fields.get(field_name)
+        choices = getattr(field_instance, 'choices', None)
+
+        if not choices:
+            raise AttributeError(
+                'Field \'{field_name}\' has not attribute \'choices\''.format(
+                    field_name=field_name
+                )
+            )
+
+        # Closure is used to make get_FOO_display callable
+        def _func():
+            field_value = self.__dict__.get(field_name)
+            display = field_instance.get_choice_value(field_value)
+
+            return display
+
+        return _func
 
     def __getattribute__(self, item):
         def __getattribute(obj, attribute):
