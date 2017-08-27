@@ -16,14 +16,11 @@ from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 
 ModelManagement = namedtuple('ModelManagement', [
-    'collection_name', 'connection', 'dispatcher', 'sorting', 'declared_fields'
+    'dispatcher', 'sorting', 'declared_fields'
 ])
 
 
 class BaseModel(type):
-    _collection_name = None
-    _connection = None
-
     """
     Metaclass for all models.
     """
@@ -34,9 +31,7 @@ class BaseModel(type):
         # If it is not MongoModel
         if bases:
             attrs['_management'] = ModelManagement(
-                collection_name=mcs._get_collection_name(name, attrs),
-                connection=mcs._get_connection(name, attrs),
-                dispatcher=mcs._get_dispatcher(),
+                dispatcher=mcs._get_dispatcher(name, attrs),
                 sorting=mcs._get_sorting(attrs),
                 declared_fields=mcs._get_declared_fields(bases, attrs),
             )
@@ -94,6 +89,8 @@ class BaseModel(type):
             if model in mcs._get_models_list(models):
                 break
 
+            db_name, db_settings = None, None
+
         if not (db_name or db_settings):
             exception = 'There is no database configuration for the \'{}\' model'
             raise Exception(exception.format(model))
@@ -115,7 +112,6 @@ class BaseModel(type):
             database=db_name
         )
 
-        mcs._connection = connection
         return connection
 
     @classmethod
@@ -150,18 +146,23 @@ class BaseModel(type):
                     )
                 )
 
-        mcs._collection_name = collection_name
         return collection_name
 
     @classmethod
-    def _get_dispatcher(mcs):
+    def _get_dispatcher(mcs, name, attrs):
         """
         Get the dispatcher - the driver that organizes queries to the database.
         :param attrs: list - class attributes
         :return: MongoDispatcher instance
         """
-        connection = mcs._connection
-        return MongoDispatcher(connection, mcs._collection_name)
+        dispatcher = None
+
+        if not mcs._is_abstract(attrs):
+            connection = mcs._get_connection(name, attrs)
+            collection_name = mcs._get_collection_name(name, attrs)
+            dispatcher = MongoDispatcher(connection, collection_name)
+
+        return dispatcher
 
     @classmethod
     def _get_sorting(mcs, attrs):
@@ -170,8 +171,7 @@ class BaseModel(type):
         :param attrs: list - class attributes
         :return: tuple - list of field names
         """
-        meta = attrs.get('Meta')
-        return getattr(meta, 'sorting', ())
+        return None if mcs._is_abstract(attrs) else getattr(attrs.get('Meta'), 'sorting', ())
 
     @classmethod
     def _get_declared_fields(mcs, bases, attrs):
@@ -335,11 +335,11 @@ class MongoModel(metaclass=BaseModel):
 
     @classmethod
     def get_collection_name(cls):
-        return cls._get_management_param('collection_name')
+        return cls.get_dispatcher().collection_name
 
     @classmethod
     def get_connection(cls):
-        return cls._get_management_param('connection')
+        return cls.get_dispatcher().connection
 
     @classmethod
     def get_sorting(cls):

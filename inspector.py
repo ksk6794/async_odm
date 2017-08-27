@@ -113,11 +113,33 @@ class Inspector:
             module_object = importlib.import_module(module_path)
             yield module_object
 
-    def get_odm_models(self):
-        for module_object in self.get_modules():
-            for name, obj in module_object.__dict__.copy().items():
-                if self.is_odm_model(obj) and self.has_declared_fields(obj):
-                    yield obj
+    @staticmethod
+    def get_odm_models():
+        settings_module = os.environ.get('ODM_SETTINGS_MODULE')
+
+        if not settings_module:
+            raise ImportError(
+                'Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.'
+            )
+
+        settings = importlib.import_module(settings_module)
+
+        for db_name, db_settings in settings.DATABASES.items():
+            for path, models in db_settings.get('models').items():
+                for model_name in models:
+                    model_module = importlib.import_module(path)
+
+                    if not hasattr(model_module, model_name):
+                        raise Exception(
+                            'The model \'{model_name}\' is specified in the configuration, '
+                            'but is not in the module \'{path}\'.'.format(
+                                model_name=model_name,
+                                path=path
+                            )
+                        )
+
+                    model = getattr(model_module, model_name)
+                    yield model
 
     async def process_models(self):
         for model in self.get_odm_models():
