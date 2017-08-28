@@ -7,7 +7,7 @@ class Field:
     """
     Base class of any field.
     """
-    type = None
+    field_type = None
     _name = None
     _value = None
     is_sub_field = False
@@ -42,11 +42,11 @@ class Field:
     def get_field_name(self):
         return self._name
 
-    def get_field_value(self):
-        return self._value
-
     def set_field_value(self, value):
         self._value = value
+
+    def get_field_value(self):
+        return self._value
 
     def get_choice_key(self, value):
         choices = getattr(self, 'choices', None)
@@ -121,7 +121,7 @@ class Field:
 
 
 class BoolField(Field):
-    type = bool
+    field_type = bool
 
     def __init__(self, null=False, default=None, choices=None):
         self.null = null
@@ -130,7 +130,7 @@ class BoolField(Field):
 
 
 class StringField(Field):
-    type = str
+    field_type = str
 
     def __init__(self, null=False, blank=True, min_length=None, max_length=None,
                  unique=False, index=None, default=None, choices=None):
@@ -145,7 +145,7 @@ class StringField(Field):
 
 
 class IntegerField(Field):
-    type = int
+    field_type = int
 
     def __init__(self, null=False, unique=False, default=None, choices=None):
         self.null = null
@@ -155,7 +155,7 @@ class IntegerField(Field):
 
 
 class FloatField(Field):
-    type = float
+    field_type = float
 
     def __init__(self, null=False, unique=False, default=None, choices=None):
         self.null = null
@@ -165,7 +165,7 @@ class FloatField(Field):
 
 
 class ListField(Field):
-    type = list
+    field_type = list
 
     def __init__(self, child=None, null=False, length=None, unique=False, default=None):
         self.child = child
@@ -191,7 +191,7 @@ class ListField(Field):
 
 
 class DictField(Field):
-    type = dict
+    field_type = dict
 
     def __init__(self, null=False, unique=False, min_length=None, max_length=None, default=None):
         self.null = null
@@ -206,7 +206,7 @@ class DictField(Field):
 
 
 class DateTimeField(Field):
-    type = datetime
+    field_type = datetime
 
     def __init__(self, null=False, auto_now_create=False, auto_now_update=False):
         self.null = null

@@ -34,7 +34,7 @@ class FieldValidator:
 
     @property
     def field_type(self):
-        return self.field_instance.type
+        return self.field_instance.field_type
 
     @property
     def is_sub_field(self):
