@@ -1,5 +1,5 @@
 from datetime import datetime
-from core.exceptions import ValidationError
+from core.validators import FieldValidator
 from .constants import CREATE, UPDATE
 
 
@@ -99,56 +99,8 @@ class Field:
         return value
 
     def validate(self, name, value):
-        if name:
-            null = getattr(self, 'null', False) or False
-            blank = getattr(self, 'blank', True) or True
-            min_length = getattr(self, 'min_length', None)
-            max_length = getattr(self, 'max_length', None)
-
-            if value is not None:
-                if self.type and not isinstance(value, self.type):
-                    exception = 'Field `{field_name} has wrong type! ' \
-                                'Expected {field_type}`'.format(
-                                    field_name=name,
-                                    field_type=self.type.__name__
-                                )
-                    raise ValidationError(exception, self.is_sub_field)
-
-                if min_length or max_length:
-                    if hasattr(value, '__len__'):
-                        if max_length and len(value) > max_length:
-                            exception = 'Field `{field_name}` exceeds the max length {length}'.format(
-                                field_name=name,
-                                length=max_length
-                            )
-                            raise ValidationError(exception, self.is_sub_field)
-
-                        elif min_length and len(value) < min_length:
-                            exception = 'Field `{field_name}` exceeds the min length {length}'.format(
-                                field_name=name,
-                                length=min_length
-                            )
-                            raise ValidationError(exception, self.is_sub_field)
-
-                    else:
-                        exception = 'Cannot count the length of the field `{field_name}`.' \
-                                    'Define the __len__ method'.format(
-                                        field_name=name
-                                    )
-                        raise ValidationError(exception, self.is_sub_field)
-
-            else:
-                if null is True and value is None:
-                    exception = 'Field `{field_name}` can not be null'.format(
-                        field_name=name
-                    )
-                    raise ValidationError(exception, self.is_sub_field)
-
-                if blank is False and value == '':
-                    exception = 'Field `{field_name}` can not be blank'.format(
-                        field_name=name
-                    )
-                    raise ValidationError(exception, self.is_sub_field)
+        field_validator = FieldValidator(self, name, value)
+        field_validator.validate()
 
         return value
 
@@ -215,8 +167,8 @@ class FloatField(Field):
 class ListField(Field):
     type = list
 
-    def __init__(self, base_field=None, null=False, length=None, unique=False, default=None):
-        self.base_field = base_field
+    def __init__(self, child=None, null=False, length=None, unique=False, default=None):
+        self.child = child
         self.null = null
         self.length = length
         self.unique = unique
@@ -230,10 +182,10 @@ class ListField(Field):
         value = super().validate(name, value)
 
         # TODO: use multiprocessing pool of workers
-        if value and self.base_field is not None:
+        if value and self.child is not None:
             for list_item in value:
-                self.base_field.is_sub_field = True
-                self.base_field.validate(name, list_item)
+                self.child.is_sub_field = True
+                self.child.validate(name, list_item)
 
         return value
 

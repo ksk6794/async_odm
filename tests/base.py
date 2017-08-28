@@ -2,6 +2,9 @@ import importlib
 from unittest.mock import MagicMock
 import asyncio
 import unittest
+import inspect
+
+from core.base import MongoModel
 
 
 class AsyncMock(MagicMock):
@@ -25,11 +28,16 @@ class BaseAsyncTestCase(unittest.TestCase):
     def __getattribute__(self, item):
         attr = object.__getattribute__(self, item)
         if asyncio.iscoroutinefunction(attr):
-            # TODO: Find all the models in the current test and replace the name of the database.
-            # TODO: Save the models to the list and delete the database after the test is completed.
-            # importlib.import_module(self.__module__)
-
             if item not in self._function_cache:
                 self._function_cache[item] = self.coroutine_function_decorator(attr)
+
+                # TODO: Find all the models in the current test and replace the name of the database.
+                # TODO: Save the models to the list and delete the database after the test is completed.
+                test_module = importlib.import_module(self.__module__)
+
+                for obj in test_module.__dict__.values():
+                    if inspect.isclass(obj) and issubclass(obj, MongoModel):
+                        model = obj
+
             return self._function_cache[item]
         return attr
