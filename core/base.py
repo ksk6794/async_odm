@@ -15,7 +15,11 @@ from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 
-ModelManagement = namedtuple('ModelManagement', ['declared_fields', 'dispatcher', 'sorting'])
+ModelManagement = namedtuple('ModelManagement', [
+    'declared_fields',
+    'dispatcher',
+    'sorting'
+])
 
 
 class BaseModel(type):

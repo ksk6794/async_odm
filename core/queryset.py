@@ -72,6 +72,7 @@ class QuerySet:
         return self
 
     async def delete(self):
+        # TODO: If the object to be deleted contains backwards relations, handle them
         result = None
 
         if not self.model.has_backwards:
