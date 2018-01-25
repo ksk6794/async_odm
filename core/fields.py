@@ -291,7 +291,7 @@ class ForeignKey(BaseRelationField):
     backward_class = ForeignKeyBackward
 
     def _get_query(self):
-        if not self._query:
+        if not self._query and self._value:
             get_kwargs = {'_id': self._value.id}
             self._query = self.relation.objects.get(**get_kwargs)
 
@@ -306,5 +306,5 @@ class OneToOne(BaseRelationField):
         self.unique = True
 
     def _get_query(self):
-        get_kwargs = {'_id': self._value.id}
+        get_kwargs = {'_id': self._value.id} if self._value else {}
         return self.relation.objects.get(**get_kwargs)

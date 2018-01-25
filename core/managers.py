@@ -181,17 +181,18 @@ class OnDeleteManager:
                     # Get 'on_delete' parameter with the action applied to bwd_field_instance documents
                     on_delete = relation_field_instance.on_delete
 
-                    # await the copied object (prevent 'can not reuse awaitable coroutine')
-                    rel_odm_objects = await copy.deepcopy(bwd_field_instance)
-                    rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
+                    if on_delete is not None:
+                        # await the copied object (prevent 'can not reuse awaitable coroutine')
+                        rel_odm_objects = await copy.deepcopy(bwd_field_instance)
+                        rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
 
-                    # Recursively process related objects
-                    children = {
-                        bwd_field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
-                    }
+                        # Recursively process related objects
+                        children = {
+                            bwd_field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
+                        }
 
-                    data.setdefault(on_delete, [])
-                    data[on_delete].append(children)
+                        data.setdefault(on_delete, [])
+                        data[on_delete].append(children)
 
             items.append(data)
 
@@ -208,12 +209,10 @@ class OnDeleteManager:
                     if isinstance(value, list) and value:
                         await _walk(tree=value, action=action)
 
-                        # Handle the 'on_delete' parameter in relationships from depth
+                        # Process the 'on_delete' parameter in relationships from depth
                         if isinstance(key, BaseBackwardRelationField):
                             # In the nested structure key might be an BaseBackwardRelationField
                             await self.process(field_instance=key, action=action)
-
-                pass
 
         for obj in objects:
             relationship_tree = await self.analyze_backwards(obj)

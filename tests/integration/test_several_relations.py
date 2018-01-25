@@ -23,7 +23,7 @@ class Comment(MongoModel):
         collection_name = 'rel_comment'
 
     post = ForeignKey(Post, related_name='comments', on_delete=SET_NULL)
-    author = ForeignKey(User, related_name='comments', on_delete=CASCADE)
+    author = ForeignKey(User, related_name='comments', on_delete=SET_NULL)
     content = StringField()
 
 
@@ -45,11 +45,17 @@ class SeveralRelationsTests(BaseAsyncTestCase):
         await user.delete()
 
         # При удалении пользователя должны удалиться всего посты, а автор у комментариев установится в null.
-        d_user = await User.objects.filter(username='Mike')
-        d_post = await Post.objects.filter(author=d_user)
-        d_comment = await Comment.objects.get(content='text...')
-        d_author = await d_comment.author
-        await d_comment.delete()
+        users_count = await User.objects.filter(username='Mike').count()
+        self.assertEqual(users_count, 0)
+
+        posts_count = await Post.objects.count()
+        self.assertEqual(posts_count, 0)
+
+        comment = await Comment.objects.get(content='text...')
+        # TODO: Fix the await null Rel
+        await comment.post
+        await comment.author
+        await comment.delete()
 
 
     # async def test_some(self):
