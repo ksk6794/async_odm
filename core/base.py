@@ -6,7 +6,7 @@ import importlib
 from collections import namedtuple
 from bson import DBRef
 
-from core.managers import OnDeleteManager, RelationManager
+from core.managers import RelationManager, OnDeleteManager
 from .queryset import QuerySet
 from .utils import classproperty
 from .connection import MongoConnection
@@ -15,11 +15,11 @@ from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 
-ModelManagement = namedtuple('ModelManagement', [
-    'declared_fields',
-    'dispatcher',
-    'sorting'
-])
+class ModelManagement:
+    # __slots__ = ('declared_fields', 'dispatcher', 'sorting', 'has_backwards')
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
 
 
 class BaseModel(type):
@@ -36,6 +36,7 @@ class BaseModel(type):
                 declared_fields=mcs._get_declared_fields(bases, attrs),
                 dispatcher=mcs._get_dispatcher(name, attrs),
                 sorting=mcs._get_sorting(attrs),
+                has_backwards=False
             )
 
         model = super().__new__(mcs, name, bases, attrs)
@@ -324,13 +325,7 @@ class MongoModel(metaclass=BaseModel):
 
     @classproperty
     def has_backwards(cls):
-        has_backwards = False
-        for field_instance in cls.get_declared_fields():
-            if isinstance(field_instance, BaseBackwardRelationField):
-                has_backwards = True
-                break
-
-        return has_backwards
+        return cls._get_management_param('has_backwards')
 
     @classmethod
     def get_declared_fields(cls):
@@ -362,13 +357,10 @@ class MongoModel(metaclass=BaseModel):
         self._action = None
 
     async def delete(self):
-        """
-        If the object to be deleted contains backwards relations, handle them
-        """
         if self.has_backwards:
             await OnDeleteManager().handle_backwards([self])
 
-        await self.objects.internal_query.delete_one(_id=self._id)
+        await self.objects.internal_query.delete_one(_id=self.id)
 
         # Remove document id from the ODM object
         self._id = None

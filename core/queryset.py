@@ -1,23 +1,21 @@
+from core.managers import OnDeleteManager
 from .utils import update
 from .node import Q, QNode, QNot, QCombination
 from pymongo import DESCENDING, ASCENDING, InsertOne
 
 
 class InternalQuery:
-    def __init__(self, queryset):
-        self.queryset = queryset
+    def __init__(self, dispatcher):
+        self.dispatcher = dispatcher
 
     async def create_one(self, **kwargs):
-        insert_result = await self.queryset.model.get_dispatcher().create(**kwargs)
-        return insert_result
+        return await self.dispatcher.create(**kwargs)
 
     async def update_one(self, document_id, **kwargs):
-        result = await self.queryset.model.get_dispatcher().update_one(document_id, **kwargs)
-        return result
+        return await self.dispatcher.update_one(document_id, **kwargs)
 
     async def delete_one(self, **kwargs):
-        res = await self.queryset.model.get_dispatcher().delete_one(**kwargs)
-        return res
+        return await self.dispatcher.delete_one(**kwargs)
 
 
 class QuerySet:
@@ -25,8 +23,6 @@ class QuerySet:
 
     def __init__(self, **kwargs):
         # TODO: aggregate
-        self.internal_query = InternalQuery(self)
-
         self._projection = {}
         self._all = False
         self._find = {}
@@ -34,7 +30,10 @@ class QuerySet:
         self._limit = None
         self._skip = None
         self._cursor = None
+
         self.__dict__.update(**kwargs)
+        dispatcher = self.model.get_dispatcher()
+        self.internal_query = InternalQuery(dispatcher)
 
     def all(self):
         self._all = True
@@ -72,7 +71,9 @@ class QuerySet:
         return self
 
     async def delete(self):
-        # TODO: If the object to be deleted contains backwards relations, handle them
+        """
+        If the object to be deleted contains backwards relations, handle them
+        """
         result = None
 
         if not self.model.has_backwards:

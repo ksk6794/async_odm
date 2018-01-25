@@ -1,6 +1,4 @@
-import asyncio
-
-from core.base import MongoModel, OnDeleteManager
+from core.base import MongoModel
 from core.fields import StringField, ForeignKey, OneToOne
 from tests.base import BaseAsyncTestCase
 from core.constants import CASCADE, SET_NULL
@@ -18,14 +16,6 @@ class Post(MongoModel):
         collection_name = 'rel_post'
 
     author = ForeignKey(User, related_name='posts', on_delete=CASCADE)
-
-
-class PostData(MongoModel):
-    class Meta:
-        collection_name = 'rel_post_data'
-
-    post = OneToOne(Post, related_name='data', on_delete=CASCADE)
-    content = StringField()
 
 
 class Comment(MongoModel):
@@ -47,19 +37,32 @@ class SeveralRelationsTests(BaseAsyncTestCase):
     def setUp(self):
         pass
 
-    async def test_some(self):
-        user = await User.objects.create(username='Ivan')
+    async def test_on_delete_cascade(self):
+        user = await User.objects.create(username='Mike')
         post = await Post.objects.create(author=user)
-
-        post_data = await PostData.objects.create(post=post, content='content...')
-        comment = await Comment.objects.create(post=post, author=user, content='text...')
-
-        comments = Comment.objects.all()
-
-        n_author = await post.author
-        u_comments = await n_author.comments
-        n_comments = await post.comments
-        p_data = await post.data
+        await Comment.objects.create(post=post, author=user, content='text...')
 
         await user.delete()
-        pass
+
+        # При удалении пользователя должны удалиться всего посты, а автор у комментариев установится в null.
+        d_user = await User.objects.filter(username='Mike')
+        d_post = await Post.objects.filter(author=d_user)
+        d_comment = await Comment.objects.get(content='text...')
+        d_author = await d_comment.author
+        await d_comment.delete()
+
+
+    # async def test_some(self):
+    #     user = await User.objects.create(username='Ivan')
+    #     post = await Post.objects.create(author=user)
+    #
+    #     comment = await Comment.objects.create(post=post, author=user, content='text...')
+    #
+    #     comments = await Comment.objects.all()
+    #     n_author = await post.author
+    #     u_comments = await n_author.comments
+    #     n_comments = await post.comments
+    #     p_data = await post.data
+    #
+    #     await user.delete()
+    #     pass

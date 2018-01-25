@@ -11,7 +11,7 @@ DATABASES = {
             'tests.integration.test_one_to_one': ['UserTest', 'ProfileTest'],
             'tests.integration.test_queryset_fields_defer_only': ['User'],
             'tests.integration.test_queryset_exclude': ['Profile'],
-            'tests.integration.test_several_relations': ['User', 'Post', 'Comment', 'PostData'],
+            'tests.integration.test_several_relations': ['User', 'Post', 'Comment'],
             'tests.integration.test_abstract': ['User']
         },
     },
