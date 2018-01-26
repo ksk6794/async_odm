@@ -31,11 +31,11 @@ class SeveralRelationsTests(BaseAsyncTestCase):
     def setUp(self):
         pass
 
-    async def test_fk_on_delete_cascade(self):
+    async def test_fk_on_delete(self):
         """
         The `on_delete` parameter specifies the behavior of the children when the parent is deleted:
-        For the User model, Post and Comment are children.
-        For the Post, Comment model is a child.
+        Post and Comment are children for the User model.
+        Comment model is a child for the Post model.
         When deleting a user: his posts will be deleted, the `author` field of his comments will set to null.
         When deleting a post, the `post` field of comments will set to null.
         """
@@ -45,18 +45,14 @@ class SeveralRelationsTests(BaseAsyncTestCase):
 
         await user.delete()
 
-        # The user must be deleted
         users_count = await User.objects.filter(username='Mike').count()
         self.assertEqual(users_count, 0)
 
-        # All user's posts must be deleted
         posts_count = await Post.objects.count()
         self.assertEqual(posts_count, 0)
 
-        # All user's comments must remain in the database
         comment = await Comment.objects.get(content='text...')
 
-        # When referring to indefinite FK fields
         self.assertIsNone(comment.post)
         self.assertIsNone(comment.author)
 
