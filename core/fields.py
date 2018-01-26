@@ -272,8 +272,9 @@ class BaseBackwardRelationField(Field):
 class ForeignKeyBackward(BaseBackwardRelationField):
     def get_query(self):
         if not self._query:
-            filter_kwargs = {self._name: self._value}
-            self._query = self.relation.objects.filter(**filter_kwargs)
+            self._query = self.relation.objects.filter(**{
+                self._name: self._value
+            })
 
         return self._query
 
@@ -281,8 +282,9 @@ class ForeignKeyBackward(BaseBackwardRelationField):
 class OneToOneBackward(BaseBackwardRelationField):
     def get_query(self):
         if not self._query:
-            filter_kwargs = {self._name: self._value}
-            self._query = self.relation.objects.get(**filter_kwargs)
+            self._query = self.relation.objects.get(**{
+                self._name: self._value
+            })
 
         return self._query
 
@@ -291,9 +293,10 @@ class ForeignKey(BaseRelationField):
     backward_class = ForeignKeyBackward
 
     def _get_query(self):
-        if not self._query and self._value:
-            get_kwargs = {'_id': self._value.id}
-            self._query = self.relation.objects.get(**get_kwargs)
+        if not self._query:
+            self._query = self.relation.objects.get(**{
+                '_id': self._value.id
+            })
 
         return self._query
 
@@ -306,5 +309,6 @@ class OneToOne(BaseRelationField):
         self.unique = True
 
     def _get_query(self):
-        get_kwargs = {'_id': self._value.id} if self._value else {}
-        return self.relation.objects.get(**get_kwargs)
+        return self.relation.objects.get(**{
+            '_id': self._value.id
+        })

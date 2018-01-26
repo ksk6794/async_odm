@@ -27,48 +27,38 @@ class Comment(MongoModel):
     content = StringField()
 
 
-# on_delete определяет поведение потомков, при удалении родителя:
-# Для модели User - Post и Comment являются потомками, для модели Post - Comment является потомком.
-# При удалении пользователя, удалятся его посты и комментарии
-# при удалении поста, поле `post` комментария установится в NULL
-
-
 class SeveralRelationsTests(BaseAsyncTestCase):
     def setUp(self):
         pass
 
-    async def test_on_delete_cascade(self):
+    async def test_fk_on_delete_cascade(self):
+        """
+        The `on_delete` parameter specifies the behavior of the children when the parent is deleted:
+        For the User model, Post and Comment are children.
+        For the Post, Comment model is a child.
+        When deleting a user: his posts will be deleted, the `author` field of his comments will set to null.
+        When deleting a post, the `post` field of comments will set to null.
+        """
         user = await User.objects.create(username='Mike')
         post = await Post.objects.create(author=user)
         await Comment.objects.create(post=post, author=user, content='text...')
 
         await user.delete()
 
-        # При удалении пользователя должны удалиться всего посты, а автор у комментариев установится в null.
+        # The user must be deleted
         users_count = await User.objects.filter(username='Mike').count()
         self.assertEqual(users_count, 0)
 
+        # All user's posts must be deleted
         posts_count = await Post.objects.count()
         self.assertEqual(posts_count, 0)
 
+        # All user's comments must remain in the database
         comment = await Comment.objects.get(content='text...')
-        # TODO: Fix the await null Rel
-        await comment.post
-        await comment.author
+
+        # When referring to indefinite FK fields
+        self.assertIsNone(comment.post)
+        self.assertIsNone(comment.author)
+
         await comment.delete()
 
-
-    # async def test_some(self):
-    #     user = await User.objects.create(username='Ivan')
-    #     post = await Post.objects.create(author=user)
-    #
-    #     comment = await Comment.objects.create(post=post, author=user, content='text...')
-    #
-    #     comments = await Comment.objects.all()
-    #     n_author = await post.author
-    #     u_comments = await n_author.comments
-    #     n_comments = await post.comments
-    #     p_data = await post.data
-    #
-    #     await user.delete()
-    #     pass

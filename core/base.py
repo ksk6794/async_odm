@@ -310,8 +310,9 @@ class MongoModel(metaclass=BaseModel):
             elif isinstance(field_instance, BaseBackwardRelationField):
                 field_value = __getattribute(self, '_id')
 
-            field_instance.set_field_value(field_value)
-            attr = field_instance
+            if field_value is not None:
+                field_instance.set_field_value(field_value)
+                attr = field_instance
 
         return attr
 
