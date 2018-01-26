@@ -27,7 +27,7 @@ class Comment(MongoModel):
     content = StringField()
 
 
-class SeveralRelationsTests(BaseAsyncTestCase):
+class FKOnDeleteTests(BaseAsyncTestCase):
     def setUp(self):
         pass
 

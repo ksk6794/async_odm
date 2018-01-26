@@ -11,7 +11,8 @@ DATABASES = {
             'tests.integration.test_one_to_one': ['UserTest', 'ProfileTest'],
             'tests.integration.test_queryset_fields_defer_only': ['User'],
             'tests.integration.test_queryset_exclude': ['Profile'],
-            'tests.integration.test_several_relations': ['User', 'Post', 'Comment'],
+            'tests.integration.test_fk_on_delete': ['User', 'Post', 'Comment'],
+            'tests.integration.test_o2o_on_delete': ['User', 'UserProfile'],
             'tests.integration.test_abstract': ['User']
         },
     },
