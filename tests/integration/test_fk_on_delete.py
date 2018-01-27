@@ -1,26 +1,26 @@
 from core.base import MongoModel
-from core.fields import StringField, ForeignKey, OneToOne
+from core.fields import StringField, ForeignKey
 from tests.base import BaseAsyncTestCase
 from core.constants import CASCADE, SET_NULL
 
 
 class User(MongoModel):
     class Meta:
-        collection_name = 'rel_user'
+        collection_name = 'rel_fk_user'
 
     username = StringField()
 
 
 class Post(MongoModel):
     class Meta:
-        collection_name = 'rel_post'
+        collection_name = 'rel_fk_post'
 
     author = ForeignKey(User, related_name='posts', on_delete=CASCADE)
 
 
 class Comment(MongoModel):
     class Meta:
-        collection_name = 'rel_comment'
+        collection_name = 'rel_fk_comment'
 
     post = ForeignKey(Post, related_name='comments', on_delete=SET_NULL)
     author = ForeignKey(User, related_name='comments', on_delete=SET_NULL)
