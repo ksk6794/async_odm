@@ -449,17 +449,19 @@ class MongoModel(metaclass=BaseModel):
         document_id = getattr(field_value, '_id', field_value)
 
         # For consistency check if exist related object in the database
-        if document_id is not None and not await field_instance.relation.objects.filter(_id=document_id).count():
-            raise ValueError(
-                'Relation document with ObjectId(\'{document_id}\') does not exist.\n'
-                'Model: \'{model_name}\', Field: \'{field_name}\''.format(
-                    document_id=str(document_id),
-                    model_name=self.__class__.__name__,
-                    field_name=field_name
-                ))
+        if document_id is not None:
+            if not await field_instance.relation.objects.filter(_id=document_id).count():
+                raise ValueError(
+                    'Relation document with ObjectId(\'{document_id}\') does not exist.\n'
+                    'Model: \'{model_name}\', Field: \'{field_name}\''.format(
+                        document_id=str(document_id),
+                        model_name=self.__class__.__name__,
+                        field_name=field_name
+                    ))
 
-
-        field_value = None if document_id is None else DBRef(collection_name, document_id)
+            field_value = DBRef(collection_name, document_id)
+        else:
+            field_value = None
 
         return field_value
 
