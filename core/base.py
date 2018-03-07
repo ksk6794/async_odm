@@ -3,7 +3,6 @@ import re
 import copy
 import asyncio
 import importlib
-from collections import namedtuple
 from bson import DBRef
 
 from core.managers import RelationManager, OnDeleteManager
@@ -128,6 +127,7 @@ class BaseModel(type):
         :param attrs: list - class attributes
         :return: str - collection name
         """
+        # TODO: If more than one upper-case char (.isupper)
         auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
         collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
         db_name = mcs._get_connection(name, attrs).database
@@ -449,7 +449,7 @@ class MongoModel(metaclass=BaseModel):
         document_id = getattr(field_value, '_id', field_value)
 
         # For consistency check if exist related object in the database
-        if not await field_instance.relation.objects.filter(_id=document_id).count():
+        if document_id is not None and not await field_instance.relation.objects.filter(_id=document_id).count():
             raise ValueError(
                 'Relation document with ObjectId(\'{document_id}\') does not exist.\n'
                 'Model: \'{model_name}\', Field: \'{field_name}\''.format(
@@ -458,7 +458,8 @@ class MongoModel(metaclass=BaseModel):
                     field_name=field_name
                 ))
 
-        field_value = DBRef(collection_name, document_id)
+
+        field_value = None if document_id is None else DBRef(collection_name, document_id)
 
         return field_value
 

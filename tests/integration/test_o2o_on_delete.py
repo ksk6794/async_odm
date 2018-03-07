@@ -44,6 +44,6 @@ class SeveralRelationsTests(BaseAsyncTestCase):
         self.assertEqual(profiles_count, 0)
 
         # TODO: Address user doesn't sets to null
-        address = Address.objects.get(data='text...')
+        address = await Address.objects.get(data='text...')
         self.assertIsNone(address.user)
         await address.delete()
