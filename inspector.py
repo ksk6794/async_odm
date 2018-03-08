@@ -7,6 +7,7 @@ from pymongo.errors import OperationFailure
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
 from core.base import MongoModel
+from core.exceptions import SettingsError
 from core.index import Index
 
 
@@ -130,7 +131,7 @@ class Inspector:
                     model_module = importlib.import_module(path)
 
                     if not hasattr(model_module, model_name):
-                        raise Exception(
+                        raise SettingsError(
                             'The model \'{model_name}\' is specified in the configuration, '
                             'but is not in the module \'{path}\'.'.format(
                                 model_name=model_name,

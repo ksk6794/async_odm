@@ -10,6 +10,14 @@ class QuerysetError(Exception):
     pass
 
 
+class ProtectedError(Exception):
+    pass
+
+
+class SettingsError(Exception):
+    pass
+
+
 class ValidationError(Exception):
     def __init__(self, message, is_sub_field):
         sub_text = ' (Sub-field exception)'

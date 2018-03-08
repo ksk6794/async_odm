@@ -2,6 +2,7 @@ import copy
 from collections import namedtuple
 
 from core.constants import CASCADE, PROTECTED, SET_NULL, SET_DEFAULT
+from core.exceptions import ProtectedError
 from core.fields import BaseRelationField, BaseBackwardRelationField, OneToOneBackward, ForeignKeyBackward
 
 WaitedRelation = namedtuple('WaitedRelation', [
@@ -66,10 +67,11 @@ class RelationManager:
                     rel_model = self.get_model(relation)
 
                 else:
-                    exception = 'Wrong relation type! ' \
-                                'You should specify the model class ' \
-                                'or str with name of class model.'
-                    raise Exception(exception)
+                    raise TypeError(
+                        'Wrong relation type!'
+                        'You should specify the model class '
+                        'or str with name of class model.'
+                    )
 
                 # If the model is not yet registered
                 if rel_model:
@@ -141,9 +143,10 @@ class OnDeleteManager:
         elif isinstance(field_instance, ForeignKeyBackward):
             await field_instance.get_query().delete()
 
+    # TODO: Test it!
     @staticmethod
     async def on_protected(field_instance):
-        raise Exception('ProtectedError')
+        raise ProtectedError()
 
     @staticmethod
     async def on_set_null(field_instance):

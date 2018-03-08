@@ -5,6 +5,7 @@ import asyncio
 import importlib
 from bson import DBRef
 
+from core.exceptions import SettingsError
 from core.managers import RelationManager, OnDeleteManager
 from .queryset import QuerySet
 from .utils import classproperty
@@ -96,7 +97,7 @@ class BaseModel(type):
             db_name, db_settings = None, None
 
         if not (db_name or db_settings):
-            raise Exception(
+            raise SettingsError(
                 'There is no database configuration for the \'{}\' model'.format(model)
             )
 
