@@ -1,3 +1,5 @@
+from pymongo.errors import DuplicateKeyError
+
 from core.exceptions import ValidationError
 from core.fields import StringField, BoolField, IntegerField
 from tests.base import BaseAsyncTestCase
@@ -64,9 +66,8 @@ class FieldsAttrsTests(BaseAsyncTestCase):
 
         try:
             await settings.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -78,7 +79,7 @@ class FieldsAttrsTests(BaseAsyncTestCase):
         try:
             settings_2 = Settings(param_2='test')
             await settings_2.save()
-        except BaseException as e:
+        except DuplicateKeyError:
             exception = True
 
         self.assertTrue(exception)
@@ -86,12 +87,14 @@ class FieldsAttrsTests(BaseAsyncTestCase):
 
     async def test_blank(self):
         settings = Settings(param_3='')
+        exception = False
 
         try:
             await settings.save()
-        except Exception as e:
-            self.assertTrue(isinstance(e, ValueError))
+        except ValueError:
+            exception = True
 
+        self.assertFalse(exception)
         await settings.delete()
 
     async def test_default(self):
@@ -99,15 +102,16 @@ class FieldsAttrsTests(BaseAsyncTestCase):
         await settings.save()
 
         self.assertEqual(settings.param_4, 'test')
-
         await settings.delete()
 
     async def test_required(self):
         test = Test()
+        exception = False
 
         try:
             await test.save()
-        except Exception as e:
-            self.assertTrue(isinstance(e, ValidationError))
+        except ValidationError:
+            exception = True
 
+        self.assertTrue(exception)
         await test.delete()

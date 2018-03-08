@@ -1,3 +1,4 @@
+from core.exceptions import QuerysetError
 from tests.integration.models import Profile
 from tests.base import BaseAsyncTestCase
 
@@ -61,7 +62,11 @@ class QuerySetFilterTests(BaseAsyncTestCase):
         self.assertEqual(len(users), 0)
 
     async def test_filter_wrong_condition(self):
+        exception = False
+
         try:
             await Profile.objects.filter(age__ggg=50)
-        except Exception as e:
-            self.assertTrue(isinstance(e, Exception))
+        except QuerysetError:
+            exception = True
+
+        self.assertTrue(exception)

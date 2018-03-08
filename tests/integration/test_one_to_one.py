@@ -1,3 +1,5 @@
+from pymongo.errors import DuplicateKeyError
+
 from core.base import MongoModel
 from core.fields import StringField, OneToOne
 from tests.base import BaseAsyncTestCase
@@ -32,7 +34,7 @@ class ToQueryConditionsTests(BaseAsyncTestCase):
         try:
             user_2 = UserTest(username='Vasya2', profile=profile)
             await user_2.save()
-        except BaseException as e:
+        except DuplicateKeyError:
             exception = True
 
         self.assertTrue(exception)

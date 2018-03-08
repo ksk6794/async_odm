@@ -55,9 +55,8 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -75,9 +74,8 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -87,6 +85,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         self.assertTrue(user._id)
         self.assertEqual(user.billing, 7.5)
+
         await user.delete()
 
     async def test_type_float_exception(self):
@@ -95,9 +94,8 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -115,9 +113,8 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -135,9 +132,8 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -155,9 +151,8 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -175,9 +170,8 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
@@ -187,22 +181,23 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         try:
             await user.save()
-        except Exception as e:
+        except ValidationError:
             exception = True
-            self.assertTrue(isinstance(e, ValidationError))
 
         self.assertTrue(exception)
 
     async def test_complex_types(self):
         registered = datetime.now().replace(minute=0, second=0, microsecond=0)
 
-        user = User(username='Bill',
-                    age=30,
-                    billing=5000.55,
-                    addresses=[1, 2, 3],
-                    data={'key': 777},
-                    registered=registered,
-                    is_active=True)
+        user = User(
+            username='Bill',
+            age=30,
+            billing=5000.55,
+            addresses=[1, 2, 3],
+            data={'key': 777},
+            registered=registered,
+            is_active=True
+        )
 
         await user.save()
 

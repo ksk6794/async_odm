@@ -1,4 +1,5 @@
 from core.base import MongoModel
+from core.exceptions import DoesNotExist
 from core.fields import StringField
 from tests.base import BaseAsyncTestCase
 
@@ -99,11 +100,14 @@ class QueryManagerTests(BaseAsyncTestCase):
         self.assertEqual(folder.name, 'test')
 
         await folder.delete()
+        exception = False
 
         try:
             await Folder.objects.get(name='test')
-        except Exception as e:
-            self.assertTrue(isinstance(e, Exception))
+        except DoesNotExist:
+            exception = True
+
+        self.assertTrue(exception)
 
         names = await Folder.objects.filter(name='test')
         self.assertEqual(names, [])

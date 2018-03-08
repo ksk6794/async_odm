@@ -1,9 +1,12 @@
+from core.exceptions import QuerysetError
+
+
 class Operator:
     def process(self, operator, field_name, value):
         method = getattr(self, 'op_{}'.format(operator), None)
 
         if not callable(method):
-            raise Exception('Unknown condition `{operator}`'.format(operator=operator))
+            raise QuerysetError('Unknown condition `{operator}`'.format(operator=operator))
 
         return method(field_name, value)
 

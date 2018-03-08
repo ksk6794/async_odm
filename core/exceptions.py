@@ -6,6 +6,10 @@ class MultipleObjectsReturned(Exception):
     pass
 
 
+class QuerysetError(Exception):
+    pass
+
+
 class ValidationError(Exception):
     def __init__(self, message, is_sub_field):
         sub_text = ' (Sub-field exception)'

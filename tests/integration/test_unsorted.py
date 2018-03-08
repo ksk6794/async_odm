@@ -1,5 +1,6 @@
 from datetime import datetime
 from core.dispatchers import MongoDispatcher
+from core.exceptions import DoesNotExist
 from core.fields import StringField, ForeignKey
 from tests.base import BaseAsyncTestCase
 from tests.models import Author, Post, Name
@@ -48,7 +49,7 @@ class IntegrationTests(BaseAsyncTestCase):
         except BaseException:
             exception = True
 
-        self.assertEqual(exception, False)
+        self.assertFalse(exception)
 
         await name.delete()
 
@@ -80,12 +81,14 @@ class IntegrationTests(BaseAsyncTestCase):
         self.assertEqual(name.name, 'test')
 
         await name.delete()
+        exception = False
 
         try:
             await Name.objects.get(name='test')
-        except Exception as e:
-            self.assertTrue(isinstance(e, Exception))
+        except DoesNotExist:
+            exception = True
 
+        self.assertTrue(exception)
         names = await Name.objects.filter(name='test')
         self.assertEqual(names, [])
 
@@ -175,12 +178,14 @@ class IntegrationTests(BaseAsyncTestCase):
 
     async def test_foreignkey_null(self):
         post = Post(title='News')
+        exception = False
 
         try:
             await post.save()
-        except Exception as e:
-            self.assertTrue(isinstance(e, ValueError))
+        except ValueError:
+            exception = True
 
+        self.assertFalse(exception)
         await post.delete()
 
     async def test_foreignkey_backward(self):
