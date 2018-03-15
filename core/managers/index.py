@@ -1,56 +1,10 @@
-import inspect
 from pymongo.errors import OperationFailure
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
-# from core.base import MongoModel
 from core.index import Index
 
 
-class Base:
-    @staticmethod
-    def is_odm_model(obj):
-        return inspect.isclass(obj) and obj.get_declared_fields()
-
-    @staticmethod
-    async def get_collection(model):
-        dispatcher = model.get_dispatcher()
-        collection = await dispatcher.get_collection()
-        return collection
-
-    @staticmethod
-    async def get_indexes(collection):
-        # Get collection Indexes
-        indexes = {}
-        try:
-            indexes = await collection.index_information()
-        except OperationFailure:
-            pass
-        return indexes
-
-
-class IndexManager(Base):
-    @staticmethod
-    def get_model_indexes(model):
-        # Get indexes from Meta
-        meta_data = getattr(model, 'Meta', None)
-        meta_indexes = list(getattr(meta_data, 'indexes', ()))
-
-        # Get indexes from fields
-        field_indexes = []
-
-        # Find and convert indexes from field attributes to Index instance
-        for field_name, field_instance in model.get_declared_fields().items():
-            unique = getattr(field_instance, 'unique', False)
-            index = getattr(field_instance, 'index', None)
-
-            if unique or index:
-                index = ASCENDING if unique and not index else index
-                field_index = Index(((field_name, index),), unique=unique)
-                field_indexes.append(field_index)
-
-        # Join meta and field indexes
-        return meta_indexes + field_indexes
-
+class IndexManager:
     async def process(self, model):
         collection = await self.get_collection(model)
         collection_indexes = await self.get_indexes(collection)
@@ -92,3 +46,43 @@ class IndexManager(Base):
                 index = list(filter(lambda elem: not isinstance(elem, bool), index))
                 await collection.create_index(index, unique=unique)
                 print('created')
+
+    @staticmethod
+    async def get_collection(model):
+        dispatcher = model.get_dispatcher()
+        collection = await dispatcher.get_collection()
+        return collection
+
+    @staticmethod
+    async def get_indexes(collection):
+        # Get collection Indexes
+        indexes = {}
+        try:
+            indexes = await collection.index_information()
+        except OperationFailure as err:
+            # TODO: Log it!
+            pass
+        return indexes
+
+    @staticmethod
+    def get_model_indexes(model):
+        # Get indexes from Meta
+        meta_data = getattr(model, 'Meta', None)
+        meta_indexes = list(getattr(meta_data, 'indexes', ()))
+
+        # Get indexes from fields
+        field_indexes = []
+
+        # Find and convert indexes from field attributes to Index instance
+        for field_name, field_instance in model.get_declared_fields().items():
+            unique = getattr(field_instance, 'unique', False)
+            index = getattr(field_instance, 'index', None)
+
+            if unique or index:
+                index = ASCENDING if unique and not index else index
+                field_index = Index(((field_name, index),), unique=unique)
+                field_indexes.append(field_index)
+
+        # Join meta and field indexes
+        return meta_indexes + field_indexes
+
