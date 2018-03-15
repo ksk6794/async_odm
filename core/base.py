@@ -5,11 +5,12 @@ import asyncio
 import importlib
 from bson import DBRef
 
+from core.managers.connection import MongoConnection
 from .exceptions import SettingsError
 from .managers import RelationManager, OnDeleteManager
 from .queryset import QuerySet
 from .utils import classproperty
-from .managers import MongoConnection, IndexManager
+from .managers import DatabaseManager, IndexManager
 from .dispatchers import MongoDispatcher
 from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
@@ -50,7 +51,7 @@ class BaseModel(type):
         return model
 
     @classproperty
-    def settings(mcs):
+    def settings(mcs) -> object:
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
 
         if not settings_module:
@@ -61,30 +62,15 @@ class BaseModel(type):
         return importlib.import_module(settings_module)
 
     @classmethod
-    def _is_abstract(mcs, attrs):
+    def _is_abstract(mcs, attrs: []) -> bool:
         return bool(getattr(attrs.get('Meta'), 'abstract', None))
 
     @classmethod
-    def _get_model_module(mcs, name, attrs):
+    def _get_model_module(mcs, name: str, attrs: []) -> str:
         return '.'.join((attrs.get('__module__'), name))
 
     @classmethod
-    def _get_models_list(mcs, models):
-        """
-        Join each model name to the path.
-        :param models: dict - {'module_path': 'model_name'}
-        :return: list - list of models with full path
-        """
-        models_list = []
-
-        for path, models in models.items():
-            for model in models:
-                models_list.append('.'.join([path, model]))
-
-        return models_list
-
-    @classmethod
-    def _get_db_settings(mcs, name, attrs):
+    def _get_db_settings(mcs, name: str, attrs: []) -> dict:
         """
         Get current model settings from the settings module.
         :param name: str - model name
@@ -103,25 +89,19 @@ class BaseModel(type):
         return db_settings
 
     @classmethod
-    def _get_connection(mcs, name, attrs):
+    def _get_connection(mcs, name: str, attrs: []) -> MongoConnection:
         """
         Get the settings and connect to the database.
-        :param name: str - collection name
-        :param attrs: list - class attributes
-        :return: MongoConnection instance
         """
         db_settings = mcs._get_db_settings(name, attrs)
-        connection = MongoConnection(**db_settings)
+        connection = DatabaseManager().get_connection(**db_settings)
 
         return connection
 
     @classmethod
-    def _get_collection_name(mcs, name, attrs):
+    def _get_collection_name(mcs, name: str, attrs: []) -> str:
         """
         Get the collection name or generate it by the model class name.
-        :param name: str - collection name
-        :param attrs: list - class attributes
-        :return: str - collection name
         """
         # TODO: If more than one upper-case char (.isupper)
         auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
@@ -151,11 +131,9 @@ class BaseModel(type):
         return collection_name
 
     @classmethod
-    def _get_dispatcher(mcs, name, attrs):
+    def _get_dispatcher(mcs, name: str, attrs: []) -> MongoDispatcher:
         """
         Get the dispatcher - the driver that organizes queries to the database.
-        :param attrs: list - class attributes
-        :return: MongoDispatcher instance
         """
         dispatcher = None
 
@@ -167,20 +145,16 @@ class BaseModel(type):
         return dispatcher
 
     @classmethod
-    def _get_sorting(mcs, attrs):
+    def _get_sorting(mcs, attrs: []) -> tuple:
         """
         Get sorting attribute from the Meta.
-        :param attrs: list - class attributes
-        :return: tuple - list of field names
         """
         return None if mcs._is_abstract(attrs) else getattr(attrs.get('Meta'), 'sorting', ())
 
     @classmethod
-    def _get_declared_fields(mcs, bases, attrs):
+    def _get_declared_fields(mcs, bases: tuple, attrs: []) -> dict:
         """
         Get the collection fields, declared by the user when designing the model.
-        :param attrs: list - class attributes
-        :return: dict - `key` is name of the field, `value` is a Field subclasses
         """
         declared_fields = {}
 

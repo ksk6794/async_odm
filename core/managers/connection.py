@@ -11,6 +11,10 @@ class DatabaseManager:
 
         return cls._instance
 
+    @staticmethod
+    def get_connection(**kwargs):
+        return MongoConnection(**kwargs)
+
     def get_database(self, db_name):
         database_instance = None
 
