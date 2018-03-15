@@ -5,12 +5,10 @@ import asyncio
 import importlib
 from bson import DBRef
 
-from core.managers.connection import MongoConnection
 from .exceptions import SettingsError
-from .managers import RelationManager, OnDeleteManager
+from .managers import RelationManager, OnDeleteManager, DatabaseManager, IndexManager
 from .queryset import QuerySet
 from .utils import classproperty
-from .managers import DatabaseManager, IndexManager
 from .dispatchers import MongoDispatcher
 from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
@@ -25,6 +23,8 @@ class BaseModel(type):
     """
     Metaclass for all models.
     """
+    _db_manager = None
+
     def __init__(cls, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -49,6 +49,13 @@ class BaseModel(type):
                 loop.run_until_complete(task)
 
         return model
+
+    @classproperty
+    def db_manager(mcs):
+        if not mcs._db_manager:
+            mcs._db_manager = DatabaseManager(**mcs.settings.DATABASES)
+
+        return mcs._db_manager
 
     @classproperty
     def settings(mcs) -> object:
@@ -86,16 +93,6 @@ class BaseModel(type):
         return db_settings
 
     @classmethod
-    def _get_connection(mcs, name: str, attrs: []) -> MongoConnection:
-        """
-        Get the settings and connect to the database.
-        """
-        db_settings = mcs._get_db_settings(name, attrs)
-        connection = DatabaseManager().get_connection(**db_settings)
-
-        return connection
-
-    @classmethod
     def _get_collection_name(mcs, name: str, attrs: []) -> str:
         """
         Get the collection name or generate it by the model class name.
@@ -103,12 +100,13 @@ class BaseModel(type):
         # TODO: If more than one upper-case char (.isupper)
         auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
         collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
-        db_name = mcs._get_connection(name, attrs).database
-
+        alias = getattr(attrs.get('Meta'), 'alias', 'default')
+        db_name = mcs.db_manager.get_db_name(alias)
         models = RelationManager().get_models()
 
         for model_name, model in models.items():
-            init_db_name = model.get_connection().database
+            init_db_alias = getattr(getattr(model, 'Meta', None), 'alias', 'default')
+            init_db_name = mcs.db_manager.get_db_name(init_db_alias)
             init_collection_name = model.get_collection_name()
 
             # Ensure that collection names do not match within the current database
@@ -135,9 +133,10 @@ class BaseModel(type):
         dispatcher = None
 
         if not mcs._is_abstract(attrs):
-            connection = mcs._get_connection(name, attrs)
             collection_name = mcs._get_collection_name(name, attrs)
-            dispatcher = MongoDispatcher(connection, collection_name)
+            alias = getattr(attrs.get('Meta'), 'alias', 'default')
+            database = mcs._db_manager.get_database(alias)
+            dispatcher = MongoDispatcher(database, collection_name)
 
         return dispatcher
 
@@ -306,10 +305,6 @@ class MongoModel(metaclass=BaseModel):
     @classmethod
     def get_collection_name(cls):
         return cls.get_dispatcher().collection_name
-
-    @classmethod
-    def get_connection(cls):
-        return cls.get_dispatcher().connection
 
     @classmethod
     def get_sorting(cls):

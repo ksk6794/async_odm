@@ -1,10 +1,12 @@
+from asyncio import iscoroutine
+
 from pymongo import ReturnDocument
 from .exceptions import DoesNotExist, MultipleObjectsReturned
 
 
 class MongoDispatcher:
-    def __init__(self, connection, collection_name):
-        self.connection = connection
+    def __init__(self, database, collection_name):
+        self.database = database
         self.collection_name = collection_name
 
     async def count(self, **kwargs):
@@ -14,10 +16,10 @@ class MongoDispatcher:
 
     async def get_collection(self):
         # TODO: Disallow conflicting collection names ('name', ...)
-        client = self.connection.get_client()
-        database = await self.connection.get_database(client)
-        collection = getattr(database, self.collection_name)
-        return collection
+        if iscoroutine(self.database):
+            self.database = await self.database
+
+        return getattr(self.database, self.collection_name)
 
     async def create(self, **kwargs):
         """
