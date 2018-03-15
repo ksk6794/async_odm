@@ -16,8 +16,6 @@ from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 
 class ModelManagement:
-    # __slots__ = ('declared_fields', 'dispatcher', 'sorting', 'has_backwards')
-
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
