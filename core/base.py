@@ -53,7 +53,13 @@ class BaseModel(type):
     @classproperty
     def db_manager(mcs):
         if not mcs._db_manager:
-            mcs._db_manager = DatabaseManager(**mcs.settings.DATABASES)
+            try:
+                mcs._db_manager = DatabaseManager(**mcs.settings.DATABASES)
+            except AttributeError:
+                raise SettingsError(
+                    'There is no database configuration! '
+                    'Please, define the \'DATABASES\' variable in the your settings module'
+                )
 
         return mcs._db_manager
 
@@ -62,11 +68,12 @@ class BaseModel(type):
         settings_module = os.environ.get('ODM_SETTINGS_MODULE')
 
         if not settings_module:
-            raise ImportError(
-                'Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.'
-            )
+            raise SettingsError('Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.')
 
-        return importlib.import_module(settings_module)
+        try:
+            return importlib.import_module(settings_module)
+        except ImportError:
+            raise SettingsError('Can not import settings module, make sure the path is correct.')
 
     @classmethod
     def _is_abstract(mcs, attrs: []) -> bool:
@@ -75,22 +82,6 @@ class BaseModel(type):
     @classmethod
     def _get_model_module(mcs, name: str, attrs: []) -> str:
         return '.'.join((attrs.get('__module__'), name))
-
-    @classmethod
-    def _get_db_settings(mcs, name: str, attrs: []) -> dict:
-        """
-        Get current model settings from the settings module.
-        """
-        model = mcs._get_model_module(name, attrs)
-        db = getattr(attrs.get('Meta'), 'db', 'default')
-        db_settings = mcs.settings.DATABASES.get(db)
-
-        if not db_settings:
-            raise SettingsError(
-                'There is no database configuration for the \'{}\' model'.format(model)
-            )
-
-        return db_settings
 
     @classmethod
     def _get_collection_name(mcs, name: str, attrs: []) -> str:
