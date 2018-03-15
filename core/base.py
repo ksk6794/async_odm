@@ -73,9 +73,6 @@ class BaseModel(type):
     def _get_db_settings(mcs, name: str, attrs: []) -> dict:
         """
         Get current model settings from the settings module.
-        :param name: str - model name
-        :param attrs: list - class attributes
-        :return: tuple - database name, database settings
         """
         model = mcs._get_model_module(name, attrs)
         db = getattr(attrs.get('Meta'), 'db', 'default')
