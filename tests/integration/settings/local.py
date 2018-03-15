@@ -10,3 +10,5 @@ DATABASES = {
         'database': 'test_odm'
     }
 }
+
+AUTO_INSPECT = True

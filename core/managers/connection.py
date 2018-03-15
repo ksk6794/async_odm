@@ -37,21 +37,32 @@ class DatabaseManager:
 class MongoConnection:
     host = None
     port = None
+    username = None
+    password = None
     database = None
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-    async def get_database(self):
+    def get_client(self):
         client = DatabaseManager().get_client(self.host, self.port)
 
         if not client:
             client = AsyncIOMotorClient(self.host, self.port)
 
+        return client
+
+    async def get_database(self, client):
         database = DatabaseManager().get_database(self.database)
 
         if not database:
             database = AsyncIOMotorDatabase(client, self.database)
             DatabaseManager().set_database(database)
 
+        if self.username:
+            await self.auth(database)
+
         return database
+
+    async def auth(self, database):
+        await database.authenticate(self.username, self.password)

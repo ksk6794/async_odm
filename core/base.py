@@ -9,7 +9,7 @@ from core.exceptions import SettingsError
 from core.managers import RelationManager, OnDeleteManager
 from .queryset import QuerySet
 from .utils import classproperty
-from .connection import MongoConnection
+from .managers import MongoConnection, IndexManager
 from .dispatchers import MongoDispatcher
 from .constants import UPDATE, CREATE
 from .fields import Field, BaseRelationField, BaseBackwardRelationField
@@ -41,10 +41,26 @@ class BaseModel(type):
 
         model = super().__new__(mcs, name, bases, attrs)
 
-        if not mcs._is_abstract(attrs):
+        if not mcs._is_abstract(attrs) and model.__name__ != 'MongoModel':
             RelationManager().add_model(model)
 
+            if getattr(mcs.settings, 'AUTO_INSPECT', True) is True:
+                loop = asyncio.get_event_loop()
+                task = IndexManager().process(model)
+                loop.run_until_complete(task)
+
         return model
+
+    @classproperty
+    def settings(mcs):
+        settings_module = os.environ.get('ODM_SETTINGS_MODULE')
+
+        if not settings_module:
+            raise ImportError(
+                'Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.'
+            )
+
+        return importlib.import_module(settings_module)
 
     @classmethod
     def _is_abstract(mcs, attrs):
@@ -78,16 +94,8 @@ class BaseModel(type):
         :return: tuple - database name, database settings
         """
         model = mcs._get_model_module(name, attrs)
-        settings_module = os.environ.get('ODM_SETTINGS_MODULE')
-
-        if not settings_module:
-            raise ImportError(
-                'Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.'
-            )
-
-        settings = importlib.import_module(settings_module)
         db = getattr(attrs.get('Meta'), 'db', 'default')
-        db_settings = settings.DATABASES.get(db)
+        db_settings = mcs.settings.DATABASES.get(db)
 
         if not db_settings:
             raise SettingsError(

@@ -1,17 +1,16 @@
-import os
-import glob
 import inspect
-import asyncio
-import importlib
 from pymongo.errors import OperationFailure
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
-from core.base import MongoModel
-from core.exceptions import SettingsError
+# from core.base import MongoModel
 from core.index import Index
 
 
-class BaseInspector:
+class Base:
+    @staticmethod
+    def is_odm_model(obj):
+        return inspect.isclass(obj) and obj.get_declared_fields()
+
     @staticmethod
     async def get_collection(model):
         dispatcher = model.get_dispatcher()
@@ -29,7 +28,7 @@ class BaseInspector:
         return indexes
 
 
-class IndexInspector(BaseInspector):
+class IndexManager(Base):
     @staticmethod
     def get_model_indexes(model):
         # Get indexes from Meta
@@ -93,64 +92,3 @@ class IndexInspector(BaseInspector):
                 index = list(filter(lambda elem: not isinstance(elem, bool), index))
                 await collection.create_index(index, unique=unique)
                 print('created')
-
-
-class Inspector:
-    BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-
-    @staticmethod
-    def is_odm_model(obj):
-        return inspect.isclass(obj) and issubclass(obj, MongoModel)
-
-    @staticmethod
-    def has_declared_fields(obj):
-        return bool(obj.get_declared_fields())
-
-    def get_modules(self):
-        # Recursive walk by project directory
-        for filename in glob.iglob(self.BASE_PATH + '/**/*.py', recursive=True):
-            # Cut the BASE_PATH and .py extension from filename
-            module_path = filename[len(self.BASE_PATH) + 1:-3].replace('/', '.')
-            module_object = importlib.import_module(module_path)
-            yield module_object
-
-    @staticmethod
-    def get_odm_models():
-        settings_module = os.environ.get('ODM_SETTINGS_MODULE')
-
-        if not settings_module:
-            raise ImportError(
-                'Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.'
-            )
-
-        settings = importlib.import_module(settings_module)
-
-        for db_name, db_settings in settings.DATABASES.items():
-            for path, models in db_settings.get('models').items():
-                for model_name in models:
-                    model_module = importlib.import_module(path)
-
-                    if not hasattr(model_module, model_name):
-                        raise SettingsError(
-                            'The model \'{model_name}\' is specified in the configuration, '
-                            'but is not in the module \'{path}\'.'.format(
-                                model_name=model_name,
-                                path=path
-                            )
-                        )
-
-                    model = getattr(model_module, model_name)
-                    yield model
-
-    async def process_models(self):
-        for model in self.get_odm_models():
-            await IndexInspector().process(model)
-
-
-async def main():
-    await Inspector().process_models()
-
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
