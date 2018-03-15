@@ -65,10 +65,11 @@ class BaseModel(type):
 
     @classproperty
     def settings(mcs) -> object:
-        settings_module = os.environ.get('ODM_SETTINGS_MODULE')
+        env_var = 'ODM_SETTINGS_MODULE'
+        settings_module = os.environ.get(env_var)
 
         if not settings_module:
-            raise SettingsError('Specify an \'ODM_SETTINGS_MODULE\' variable in the environment.')
+            raise SettingsError(f'Specify an \'{env_var}\' variable in the environment.')
 
         try:
             return importlib.import_module(settings_module)
@@ -84,37 +85,8 @@ class BaseModel(type):
         return '.'.join((attrs.get('__module__'), name))
 
     @classmethod
-    def _get_collection_name(mcs, name: str, attrs: []) -> str:
-        """
-        Get the collection name or generate it by the model class name.
-        """
-        # TODO: If more than one upper-case char (.isupper)
-        auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
-        collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
-        alias = getattr(attrs.get('Meta'), 'alias', 'default')
-        db_name = mcs.db_manager.get_db_name(alias)
-        models = RelationManager().get_models()
-
-        for model_name, model in models.items():
-            init_db_alias = getattr(getattr(model, 'Meta', None), 'alias', 'default')
-            init_db_name = mcs.db_manager.get_db_name(init_db_alias)
-            init_collection_name = model.get_collection_name()
-
-            # Ensure that collection names do not match within the current database
-            current = collection_name, db_name
-            initial = init_collection_name, init_db_name
-
-            if current == initial:
-                raise ValueError(
-                    'The collection name `{collection_name}` already used by `{model_name}` model. '
-                    'Please, specify a unique collection_name manually for {cur_model}.'.format(
-                        collection_name=collection_name,
-                        model_name=model_name,
-                        cur_model=mcs._get_model_module(name, attrs)
-                    )
-                )
-
-        return collection_name
+    def _get_db_alias(cls, attrs):
+        return getattr(attrs.get('Meta'), 'db', 'default')
 
     @classmethod
     def _get_dispatcher(mcs, name: str, attrs: []) -> MongoDispatcher:
@@ -125,11 +97,42 @@ class BaseModel(type):
 
         if not mcs._is_abstract(attrs):
             collection_name = mcs._get_collection_name(name, attrs)
-            alias = getattr(attrs.get('Meta'), 'alias', 'default')
+            alias = mcs._get_db_alias(attrs)
             database = mcs._db_manager.get_database(alias)
             dispatcher = MongoDispatcher(database, collection_name)
 
         return dispatcher
+
+    @classmethod
+    def _get_collection_name(mcs, name: str, attrs: []) -> str:
+        """
+        Get the collection name or generate it by the model class name.
+        """
+        # TODO: If more than one upper-case char (.isupper)
+        auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
+        collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
+
+        # Ensure that collection names do not match within the current database
+        alias = mcs._get_db_alias(attrs)
+        db_name = mcs.db_manager.get_db_name(alias)
+        models = RelationManager().get_models()
+
+        for model_name, model in models.items():
+            init_db_alias = mcs._get_db_alias(model.__dict__)
+            init_db_name = mcs.db_manager.get_db_name(init_db_alias)
+            init_collection_name = model.get_collection_name()
+
+            current = collection_name, db_name
+            initial = init_collection_name, init_db_name
+
+            if current == initial:
+                cur_model = mcs._get_model_module(name, attrs)
+                raise ValueError(
+                    f'The collection name `{collection_name}` already used by `{model_name}` model. '
+                    f'Please, specify a unique collection_name manually for {cur_model}.'
+                )
+
+        return collection_name
 
     @classmethod
     def _get_sorting(mcs, attrs: []) -> tuple:
