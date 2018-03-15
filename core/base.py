@@ -5,8 +5,8 @@ import asyncio
 import importlib
 from bson import DBRef
 
-from core.exceptions import SettingsError
-from core.managers import RelationManager, OnDeleteManager
+from .exceptions import SettingsError
+from .managers import RelationManager, OnDeleteManager
 from .queryset import QuerySet
 from .utils import classproperty
 from .managers import MongoConnection, IndexManager
