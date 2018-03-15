@@ -86,22 +86,15 @@ class BaseModel(type):
             )
 
         settings = importlib.import_module(settings_module)
-        db_name, db_settings = None, None
+        db = getattr(attrs.get('Meta'), 'db', 'default')
+        db_settings = settings.DATABASES.get(db)
 
-        for db_name, db_settings in settings.DATABASES.items():
-            models = db_settings.get('models')
-
-            if model in mcs._get_models_list(models):
-                break
-
-            db_name, db_settings = None, None
-
-        if not (db_name or db_settings):
+        if not db_settings:
             raise SettingsError(
                 'There is no database configuration for the \'{}\' model'.format(model)
             )
 
-        return db_name, db_settings
+        return db_settings
 
     @classmethod
     def _get_connection(mcs, name, attrs):
@@ -111,12 +104,8 @@ class BaseModel(type):
         :param attrs: list - class attributes
         :return: MongoConnection instance
         """
-        db_name, db_settings = mcs._get_db_settings(name, attrs)
-        connection = MongoConnection(
-            host=db_settings.get('host'),
-            port=db_settings.get('port'),
-            database=db_name
-        )
+        db_settings = mcs._get_db_settings(name, attrs)
+        connection = MongoConnection(**db_settings)
 
         return connection
 

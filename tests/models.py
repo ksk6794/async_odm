@@ -19,6 +19,9 @@ class Post(MongoModel):
 
 
 class Author(MongoModel):
+    class Meta:
+        db = 'test'
+
     username = StringField(max_length=10)
     age = IntegerField()
     billing = FloatField()
