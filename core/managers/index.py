@@ -1,10 +1,14 @@
 from pymongo.errors import OperationFailure
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
+from core.logger import Logger
 from core.index import Index
 
 
 class IndexManager:
+    def __init__(self):
+        self.logger = Logger()
+
     async def process(self, model):
         collection = await self.get_collection(model)
         collection_indexes = await self.get_indexes(collection)
@@ -12,7 +16,7 @@ class IndexManager:
         # TODO: Validate index types
         indexes = self.get_model_indexes(model)
 
-        if indexes and isinstance(indexes, (tuple, list)):
+        if isinstance(indexes, (tuple, list)):
             mongo_indexes = set(
                 tuple(item['key']) + (item.get('unique', False),)
                 for name, item in collection_indexes.items()
@@ -35,7 +39,10 @@ class IndexManager:
                     if index_data.get('key') == find:
                         # Remove index
                         await collection.drop_index(index_name)
-                        print('removed')
+                        self.logger.info(
+                            f'Index successfully removed: \n'
+                            f'Name: {index_name} \n'
+                        )
 
             # Find Meta Indexes missing in MongoDB - create them
             indexes_for_create = model_indexes - mongo_indexes
@@ -44,8 +51,15 @@ class IndexManager:
                 # Create composite index
                 unique = list(filter(lambda elem: isinstance(elem, bool), index))[0]
                 index = list(filter(lambda elem: not isinstance(elem, bool), index))
-                await collection.create_index(index, unique=unique)
-                print('created')
+                index_name = await collection.create_index(index, unique=unique)
+
+                self.logger.info(
+                    f'Index successfully created: \n'
+                    f'Model: {model.__module__}.{model.__name__} \n'
+                    f'Name: {index_name} \n'
+                    f'Compound: {len(index) > 1} \n'
+                    f'Unique: {unique} \n'
+                )
 
     @staticmethod
     async def get_collection(model):

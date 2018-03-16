@@ -106,7 +106,7 @@ class QuerySet:
 
             if parts[-1] in available_operators:
                 operator = parts.pop()
-                value = {'${}'.format(operator): value}
+                value = {f'${operator}': value}
 
             key = '.'.join(parts)
             self._projection[key] = value
@@ -197,9 +197,7 @@ class QuerySet:
             self._skip = item.start
             self._limit = item.stop
         else:
-            raise TypeError('\'{class_name}\' object does not support indexing'.format(
-                class_name=self.__class__.__name__)
-            )
+            raise TypeError(f'\'{self.__class__.__name__}\' object does not support indexing')
 
         return self
 
