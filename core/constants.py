@@ -1,4 +1,4 @@
-# ODM MongoModel actions
+# ODM MongoModel save actions
 CREATE = 0
 UPDATE = 1
 

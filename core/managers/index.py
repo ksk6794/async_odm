@@ -1,19 +1,26 @@
 from pymongo.errors import OperationFailure
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
+from core.exceptions import IndexCollectionError
 from core.logger import Logger
 from core.index import Index
 
 
 class IndexManager:
-    def __init__(self):
-        self.logger = Logger()
+    logger = Logger()
+    _available_indexes = (
+        ASCENDING,
+        DESCENDING,
+        GEO2D,
+        GEOHAYSTACK,
+        GEOSPHERE,
+        HASHED,
+        TEXT
+    )
 
     async def process(self, model):
         collection = await self.get_collection(model)
         collection_indexes = await self.get_indexes(collection)
-
-        # TODO: Validate index types
         indexes = self.get_model_indexes(model)
 
         if isinstance(indexes, (tuple, list)):
@@ -21,10 +28,11 @@ class IndexManager:
                 tuple(item['key']) + (item.get('unique', False),)
                 for name, item in collection_indexes.items()
                 # Do not analyze the default _id index
+                # TODO: Check '_id' or '_id_'
                 if name != '_id_'
             )
             model_indexes = set(
-                item.composite_dict + (item.unique,)
+                item.keys + (item.unique,)
                 for item in indexes
                 if isinstance(item, Index)
             )
@@ -48,7 +56,7 @@ class IndexManager:
             indexes_for_create = model_indexes - mongo_indexes
 
             for index in indexes_for_create:
-                # Create composite index
+                # Create index
                 unique = list(filter(lambda elem: isinstance(elem, bool), index))[0]
                 index = list(filter(lambda elem: not isinstance(elem, bool), index))
                 index_name = await collection.create_index(index, unique=unique)
@@ -71,15 +79,16 @@ class IndexManager:
     async def get_indexes(collection):
         # Get collection Indexes
         indexes = {}
+
         try:
             indexes = await collection.index_information()
         except OperationFailure as err:
             # TODO: Log it!
             pass
+
         return indexes
 
-    @staticmethod
-    def get_model_indexes(model):
+    def get_model_indexes(self, model):
         # Get indexes from Meta
         meta_data = getattr(model, 'Meta', None)
         meta_indexes = list(getattr(meta_data, 'indexes', ()))
@@ -98,5 +107,20 @@ class IndexManager:
                 field_indexes.append(field_index)
 
         # Join meta and field indexes
-        return meta_indexes + field_indexes
+        indexes = meta_indexes + field_indexes
 
+        for index in indexes:
+            if not isinstance(index.keys, (tuple, list)):
+                raise ValueError('You must specify index like: ((field, direction),')
+
+            for field, direction in index.keys:
+                if direction not in self._available_indexes:
+                    model = f'{model.__module__}.{model.__name__}'
+
+                    raise IndexCollectionError(
+                        f'Indicated the non-existent index direction \'{direction}\' for field \'{field}\' '
+                        f'inside the \'{model}\' model. '
+                        f'Change to available indexes: {self._available_indexes}.'
+                    )
+
+        return indexes

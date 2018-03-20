@@ -44,6 +44,7 @@ class BaseModel(type):
             RelationManager().add_model(model)
 
             if getattr(mcs.settings, 'AUTO_INSPECT', True) is True:
+                pass
                 loop = asyncio.get_event_loop()
                 task = IndexManager().process(model)
                 loop.run_until_complete(task)
