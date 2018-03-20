@@ -108,7 +108,11 @@ class IndexManager:
 
         # Join meta and field indexes
         indexes = meta_indexes + field_indexes
+        self.validate_indexes(model, indexes)
 
+        return indexes
+
+    def validate_indexes(self, model, indexes):
         for index in indexes:
             if not isinstance(index.keys, (tuple, list)):
                 raise ValueError('You must specify index like: ((field, direction),')
@@ -122,5 +126,3 @@ class IndexManager:
                         f'inside the \'{model}\' model. '
                         f'Change to available indexes: {self._available_indexes}.'
                     )
-
-        return indexes
