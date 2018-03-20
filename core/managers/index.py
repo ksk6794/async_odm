@@ -27,7 +27,6 @@ class IndexManager:
             tuple(item['key']) + (item.get('unique', False),)
             for name, item in collection_indexes.items()
             # Do not analyze the default _id index
-            # TODO: Check '_id' or '_id_'
             if name != '_id_'
         )
         model_indexes = set(
