@@ -47,6 +47,7 @@ class IndexManager:
                     await collection.drop_index(index_name)
                     self.logger.info(
                         f'Index successfully removed: \n'
+                        f'Model: {model.__module__}.{model.__name__} \n'
                         f'Name: {index_name} \n'
                     )
 
