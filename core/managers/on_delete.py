@@ -49,6 +49,7 @@ class OnDeleteManager:
             field_name = field_instance.get_field_name()
             await field_instance.get_query().update(**{field_name: None})
 
+    # TODO: Test it!
     @staticmethod
     async def on_set_default(field_instance):
         # TODO: Implement setting the default value
@@ -80,9 +81,8 @@ class OnDeleteManager:
                         rel_odm_objects = rel_odm_objects if isinstance(rel_odm_objects, list) else [rel_odm_objects]
 
                         # Recursively process related objects
-                        children = {
-                            bwd_field_instance: await self.analyze_backwards(odm_objects=rel_odm_objects)
-                        }
+                        backwards = await self.analyze_backwards(odm_objects=rel_odm_objects)
+                        children = {bwd_field_instance: backwards}
 
                         data.setdefault(on_delete, [])
                         data[on_delete].append(children)
