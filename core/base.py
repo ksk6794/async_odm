@@ -109,8 +109,7 @@ class BaseModel(type):
         """
         Get the collection name or generate it by the model class name.
         """
-        # TODO: If more than one upper-case char (.isupper)
-        auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name)).lower()
+        auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name[0].title() + name[1:])).lower()
         collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
 
         # Ensure that collection names do not match within the current database
