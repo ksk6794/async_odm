@@ -238,8 +238,7 @@ class QuerySet:
     # TODO: Test it!
     async def __anext__(self):
         async for document in await self.cursor:
-            odm_object = self._to_object(document)
-            return odm_object
+            return self._to_object(document)
         raise StopAsyncIteration()
 
     def __await__(self):
