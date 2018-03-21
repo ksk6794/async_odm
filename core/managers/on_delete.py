@@ -39,10 +39,13 @@ class OnDeleteManager:
     async def on_set_null(field_instance):
         if isinstance(field_instance, OneToOneBackward):
             field_name = field_instance.get_field_name()
-            # TODO: Update by ObjectId (Don't request the odm object)
-            odm_obj = await field_instance.get_query()
-            setattr(odm_obj, field_name, None)
-            await odm_obj.save()
+            field_value = field_instance.get_field_value()
+
+            await field_instance.relation.objects.filter(
+                **{field_name: field_value}
+            ).update(
+                **{field_name: None}
+            )
 
         elif isinstance(field_instance, ForeignKeyBackward):
             field_name = field_instance.get_field_name()

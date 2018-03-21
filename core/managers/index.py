@@ -76,16 +76,7 @@ class IndexManager:
 
     @staticmethod
     async def get_indexes(collection):
-        # Get collection Indexes
-        indexes = {}
-
-        try:
-            indexes = await collection.index_information()
-        except OperationFailure as err:
-            # TODO: Log it!
-            pass
-
-        return indexes
+        return await collection.index_information()
 
     def get_model_indexes(self, model):
         # Get indexes from Meta
