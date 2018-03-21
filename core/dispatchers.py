@@ -1,7 +1,8 @@
 from asyncio import iscoroutine
+from motor.motor_asyncio import AsyncIOMotorCollection
 
 from pymongo import ReturnDocument
-from .exceptions import DoesNotExist, MultipleObjectsReturned
+from .exceptions import DoesNotExist, MultipleObjectsReturned, CollectionError
 
 
 class MongoDispatcher:
@@ -15,11 +16,10 @@ class MongoDispatcher:
         return count
 
     async def get_collection(self):
-        # TODO: Disallow conflicting collection names ('name', ...)
         if iscoroutine(self.database):
             self.database = await self.database
 
-        return getattr(self.database, self.collection_name)
+        return self.database[self.collection_name]
 
     async def create(self, **kwargs):
         """

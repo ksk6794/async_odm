@@ -258,7 +258,7 @@ class MongoModel(metaclass=BaseModel):
         field_value = None
 
         if isinstance(field_instance, (BaseRelationField, BaseBackwardRelationField)):
-            # Prevent 'can not reuse awaitable coroutine'
+            # Prevent 'can not reuse awaitable coroutine' exception
             field_instance = copy.deepcopy(field_instance)
 
             # Set the value with relation object id for a field to provide base relation

@@ -22,6 +22,10 @@ class IndexCollectionError(Exception):
     pass
 
 
+class CollectionError(Exception):
+    pass
+
+
 class ValidationError(Exception):
     def __init__(self, message, is_sub_field=False):
         sub_text = ' (Sub-field exception)'
