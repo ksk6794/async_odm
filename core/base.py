@@ -5,7 +5,7 @@ import asyncio
 import importlib
 from bson import DBRef
 
-from .exceptions import SettingsError
+from .exceptions import SettingsError, ValidationError
 from .managers import RelationManager, OnDeleteManager, DatabaseManager, IndexManager
 from .queryset import QuerySet
 from .utils import classproperty
@@ -430,8 +430,6 @@ class MongoModel(metaclass=BaseModel):
         # Call Model child (custom) validate methods
         new_value = await self._child_validator(field_name)
 
-        # TODO: Check if the validator returns a value of another type.
-
         # Set the post validate value
         if new_value is not None:
             field_value = new_value
@@ -454,5 +452,14 @@ class MongoModel(metaclass=BaseModel):
             value = self.__dict__.get(field_name)
             is_coro = asyncio.iscoroutinefunction(validator)
             new_value = await validator(value=value) if is_coro else validator(value=value)
+            field_type = self.get_declared_fields().get(field_name).field_type
+
+            # The validator must return a value in the type of the specified model field.
+            if not isinstance(new_value, field_type):
+                raise ValidationError(
+                    f'\'{validator.__name__}\' function returns the object '
+                    f'of the type \'{type(new_value).__name__}\', '
+                    f'but \'{field_type.__name__}\' expected.'
+                )
 
         return new_value
