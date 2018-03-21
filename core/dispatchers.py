@@ -1,8 +1,7 @@
 from asyncio import iscoroutine
-from motor.motor_asyncio import AsyncIOMotorCollection
 
 from pymongo import ReturnDocument
-from .exceptions import DoesNotExist, MultipleObjectsReturned, CollectionError
+from .exceptions import DoesNotExist, MultipleObjectsReturned
 
 
 class MongoDispatcher:
@@ -12,8 +11,7 @@ class MongoDispatcher:
 
     async def count(self, **kwargs):
         collection = await self.get_collection()
-        count = await collection.count(kwargs)
-        return count
+        return await collection.count(kwargs)
 
     async def get_collection(self):
         if iscoroutine(self.database):
@@ -28,13 +26,11 @@ class MongoDispatcher:
         :return: InsertOneResult (object with inserted_id)
         """
         collection = await self.get_collection()
-        insert_result = await collection.insert_one(kwargs)
-        return insert_result
+        return await collection.insert_one(kwargs)
 
     async def bulk_create(self, documents):
         collection = await self.get_collection()
-        results = await collection.bulk_write(documents)
-        return results
+        return await collection.bulk_write(documents)
 
     async def update_one(self, _id, **kwargs):
         """
@@ -44,17 +40,15 @@ class MongoDispatcher:
         :return: dict (Document before the changes)
         """
         collection = await self.get_collection()
-        document = await collection.find_one_and_update(
+        return await collection.find_one_and_update(
             filter={'_id': _id},
             update={'$set': kwargs},
             return_document=ReturnDocument.AFTER
         )
-        return document
 
     async def update_many(self, find, **kwargs):
         collection = await self.get_collection()
-        result = await collection.update_many(find, {'$set': kwargs})
-        return result
+        return await collection.update_many(find, {'$set': kwargs})
 
     async def get(self, projection, **kwargs):
         count = await self.count(**kwargs)
@@ -62,8 +56,7 @@ class MongoDispatcher:
         if count == 1:
             collection = await self.get_collection()
             params = {'projection': projection} if projection else {}
-            document = await collection.find_one(kwargs, **params)
-            return document
+            return await collection.find_one(kwargs, **params)
 
         elif count < 1:
             raise DoesNotExist('Document does not exists!')
@@ -73,35 +66,12 @@ class MongoDispatcher:
 
     async def find(self, **kwargs):
         collection = await self.get_collection()
-
-        # TODO: Move check and processing to QuerySet
-        available_params = {
-            'filter': dict,
-            'sort': list,
-            'limit': int,
-            'skip': int,
-            'projection': dict,
-        }
-        params = {}
-        for param_name, param_type in available_params.items():
-            param_value = kwargs.get(param_name)
-
-            if isinstance(param_value, param_type):
-                if hasattr(param_value, '__len__') and not len(param_value):
-                    continue
-
-                params[param_name] = param_value
-
-        cursor = collection.find(**params)
-
-        return cursor
+        return collection.find(**kwargs)
 
     async def delete_one(self, **kwargs):
         collection = await self.get_collection()
-        result = await collection.delete_one(filter=kwargs)
-        return result
+        return await collection.delete_one(filter=kwargs)
 
     async def delete_many(self, **kwargs):
         collection = await self.get_collection()
-        result = await collection.delete_many(filter=kwargs)
-        return result
+        return await collection.delete_many(filter=kwargs)

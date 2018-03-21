@@ -22,10 +22,17 @@ class QuerySet:
     model = None
 
     def __init__(self, **kwargs):
-        # TODO: aggregate
+        self._params_types = {
+            'filter': dict,
+            'sort': list,
+            'limit': int,
+            'skip': int,
+            'projection': dict,
+        }
+
         self._projection = {}
         self._all = False
-        self._find = {}
+        self._filter = {}
         self._sort = []
         self._limit = None
         self._skip = None
@@ -46,11 +53,11 @@ class QuerySet:
         return odm_object
 
     def filter(self, *args, **kwargs):
-        self._find = update(self._find, self._to_query(*args, **kwargs))
+        self._filter = update(self._filter, self._to_query(*args, **kwargs))
         return self
 
     def exclude(self, *args, **kwargs):
-        self._find = update(self._find, self._to_query(*args, invert=True, **kwargs))
+        self._filter = update(self._filter, self._to_query(*args, invert=True, **kwargs))
         return self
 
     def sort(self, *args):
@@ -67,7 +74,7 @@ class QuerySet:
 
     def raw_query(self, raw_query):
         if isinstance(raw_query, dict):
-            update(self._find, raw_query)
+            update(self._filter, raw_query)
         return self
 
     async def delete(self):
@@ -77,7 +84,7 @@ class QuerySet:
         result = None
 
         if not self.model.has_backwards:
-            result = await self.model.get_dispatcher().delete_many(**self._find)
+            result = await self.model.get_dispatcher().delete_many(**self._filter)
         else:
             async for document in await self.cursor:
                 odm_object = self._to_object(document)
@@ -86,7 +93,7 @@ class QuerySet:
         return result
 
     async def count(self):
-        result = await self.model.get_dispatcher().count(**self._find)
+        result = await self.model.get_dispatcher().count(**self._filter)
         return result
 
     async def create(self, **kwargs):
@@ -95,7 +102,7 @@ class QuerySet:
         return document
 
     async def update(self, **kwargs):
-        result = await self.model.get_dispatcher().update_many(self._find, **kwargs)
+        result = await self.model.get_dispatcher().update_many(self._filter, **kwargs)
         return result
 
     def fields(self, **kwargs):
@@ -204,13 +211,20 @@ class QuerySet:
     @property
     async def cursor(self):
         if not self._cursor:
-            self._cursor = await self.model.get_dispatcher().find(
-                sort=self._sort,
-                limit=self._limit,
-                skip=self._skip,
-                filter=self._find,
-                projection=self._projection
-            )
+            params = {}
+
+            for param_name, param_type in self._params_types.items():
+                param_value = getattr(self, f'_{param_name}')
+
+                if isinstance(param_value, param_type):
+                    # Value must not be empty
+                    if hasattr(param_value, '__len__') and not len(param_value):
+                        continue
+
+                    params[param_name] = param_value
+
+            self._cursor = await self.model.get_dispatcher().find(**params)
+
         return self._cursor
 
     async def _to_list(self):
