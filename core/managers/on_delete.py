@@ -22,9 +22,9 @@ class OnDeleteManager:
     @staticmethod
     async def on_cascade(field_instance):
         if isinstance(field_instance, OneToOneBackward):
-            filter_kwargs = {
-                field_instance.get_field_name(): field_instance.get_field_value()
-            }
+            field_name = field_instance.get_field_name()
+            field_value = field_instance.get_field_value()
+            filter_kwargs = {field_name: field_value}
             await field_instance.relation.objects.filter(**filter_kwargs).delete()
 
         elif isinstance(field_instance, ForeignKeyBackward):
@@ -41,7 +41,9 @@ class OnDeleteManager:
             field_name = field_instance.get_field_name()
             field_value = field_instance.get_field_value()
             model = field_instance.relation
-            await model.objects.filter(**{field_name: field_value}).update(**{field_name: None})
+            filter_kwargs = {field_name: field_value}
+            update_data = {field_name: None}
+            await model.objects.filter(**filter_kwargs).update(**update_data)
 
         elif isinstance(field_instance, ForeignKeyBackward):
             field_name = field_instance.get_field_name()
