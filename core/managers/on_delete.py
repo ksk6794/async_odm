@@ -40,12 +40,8 @@ class OnDeleteManager:
         if isinstance(field_instance, OneToOneBackward):
             field_name = field_instance.get_field_name()
             field_value = field_instance.get_field_value()
-
-            await field_instance.relation.objects.filter(
-                **{field_name: field_value}
-            ).update(
-                **{field_name: None}
-            )
+            model = field_instance.relation
+            await model.objects.filter(**{field_name: field_value}).update(**{field_name: None})
 
         elif isinstance(field_instance, ForeignKeyBackward):
             field_name = field_instance.get_field_name()
