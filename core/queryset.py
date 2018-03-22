@@ -1,5 +1,6 @@
 from pymongo import DESCENDING, ASCENDING, InsertOne
 
+from core.constants import CREATE
 from .utils import update
 from .node import Q, QNode, QNot, QCombination
 
@@ -135,8 +136,13 @@ class QuerySet:
     async def bulk_create(self, *args):
         documents = []
 
-        for index, document in enumerate(args):
-            internal_values = await document.get_internal_values()
+        for document in args:
+            internal_values = await document.get_internal_values(
+                action=CREATE,
+                field_values=document.__dict__,
+                modified=[],
+                undeclared={}
+            )
 
             # Wrap each document with InsertOne
             document = InsertOne(internal_values)

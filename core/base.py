@@ -1,6 +1,8 @@
 import os
 import re
 import copy
+from datetime import datetime
+
 import asyncio
 import importlib
 from bson import DBRef
@@ -11,7 +13,7 @@ from .queryset import QuerySet
 from .utils import classproperty
 from .dispatchers import MongoDispatcher
 from .constants import UPDATE, CREATE
-from .fields import Field, BaseRelationField, BaseBackwardRelationField
+from .fields import Field, BaseRelationField, BaseBackwardRelationField, DateTimeField
 
 
 class ModelManagement:
@@ -172,9 +174,6 @@ class MongoModel(metaclass=BaseModel):
     _id = None
     _management = None
 
-    # Stores the current action (save/update) for field validation
-    _action = None
-
     def __init__(self, **document):
         # Fields that were set in the model instance, but not declared.
         self._undeclared_fields = {}
@@ -317,7 +316,6 @@ class MongoModel(metaclass=BaseModel):
     async def save(self):
         document = await self._update() if self._id else await self._create()
         self.__dict__.update(document)
-        self._action = None
 
     async def delete(self):
         if self.has_backwards:
@@ -346,21 +344,27 @@ class MongoModel(metaclass=BaseModel):
 
         return document
 
-    async def get_internal_values(self):
+    @classmethod
+    async def get_internal_values(cls, action, field_values, modified, undeclared):
         """
         Convert external values to internal for saving to a database.
         """
         internal_values = {}
 
-        for field_name, field_instance in self.get_declared_fields().items():
+        for field_name, field_instance in cls.get_declared_fields().items():
             # Bring to internal values only modified fields (for update action)
-            if self._action is UPDATE and field_name not in self._modified_fields:
+            if action is UPDATE and field_name not in modified:
                 continue
 
-            field_value = await self._validate(
+            field_value = field_instance.get_value(
+                name=field_name,
+                value=field_values.get(field_name)
+            )
+
+            field_value = await cls._validate(
                 field_instance=field_instance,
                 field_name=field_name,
-                field_value=self.__dict__.get(field_name)
+                field_value=field_value
             )
 
             internal_value = None
@@ -375,10 +379,17 @@ class MongoModel(metaclass=BaseModel):
                 # Bring to the internal value
                 internal_value = field_instance.to_internal_value(field_value)
 
+                if isinstance(field_instance, DateTimeField):
+                    if (action is CREATE and field_instance.auto_now_create) or (
+                                    action is UPDATE and field_instance.auto_now_update) and not field_value:
+                        # MonogoDB rounds microseconds, and ODM does not request the created document,
+                        # for data consistency I reset them
+                        internal_value = datetime.now().replace(microsecond=0)
+
             internal_values[field_name] = internal_value
 
         # Undeclared fields are not validated
-        undeclared = self._undeclared_fields
+        undeclared = undeclared
         internal_values.update(undeclared)
 
         return internal_values
@@ -388,8 +399,12 @@ class MongoModel(metaclass=BaseModel):
         Create document with all defined fields.
         :return: dict
         """
-        self._action = CREATE
-        internal_values = await self.get_internal_values()
+        internal_values = await self.get_internal_values(
+            action=CREATE,
+            field_values=self.__dict__,
+            modified=self._modified_fields,
+            undeclared=self._undeclared_fields
+        )
         insert_result = await self.objects.internal_query.create_one(**internal_values)
 
         # Generate document from field_values and inserted_id
@@ -401,20 +416,24 @@ class MongoModel(metaclass=BaseModel):
         Update only modified document fields.
         :return: dict
         """
-        self._action = UPDATE
-        internal_values = await self.get_internal_values()
+        internal_values = await self.get_internal_values(
+            action=UPDATE,
+            field_values=self.__dict__,
+            modified=self._modified_fields,
+            undeclared=self._undeclared_fields
+        )
         document = await self.objects.internal_query.update_one(self._id, **internal_values)
         return self.get_external_values(document)
 
-    async def _validate(self, field_instance, field_name, field_value):
+    @classmethod
+    async def _validate(cls, field_instance, field_name, field_value):
         # Validate field value by default validators
-        field_value = field_instance.get_value(field_name, field_value, self._action)
         v = field_instance.validate
         is_coro = asyncio.iscoroutinefunction(v)
         await v(field_name, field_value) if is_coro else v(field_name, field_value)
 
         # Call Model child (custom) validate methods
-        new_value = await self._child_validator(field_name)
+        new_value = await cls._child_validator(field_name, field_value)
 
         # Set the post-validate value
         if new_value is not None:
@@ -422,20 +441,20 @@ class MongoModel(metaclass=BaseModel):
 
         return field_value
 
-    async def _child_validator(self, field_name):
+    @classmethod
+    async def _child_validator(cls, field_name, field_value):
         """
         Call user-defined validation methods.
         :param field_name: str
         :return: validated data
         """
         new_value = None
-        validator = getattr(self, 'validate_{}'.format(field_name), None)
+        validator = getattr(cls, 'validate_{}'.format(field_name), None)
 
         if callable(validator):
-            value = self.__dict__.get(field_name)
             is_coro = asyncio.iscoroutinefunction(validator)
-            new_value = await validator(value=value) if is_coro else validator(value=value)
-            field_type = self.get_declared_fields().get(field_name).field_type
+            new_value = await validator(value=field_value) if is_coro else validator(value=field_value)
+            field_type = cls.get_declared_fields().get(field_name).field_type
 
             # The validator must return a value in the type of the specified model field.
             if not isinstance(new_value, field_type):

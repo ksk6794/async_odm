@@ -84,12 +84,13 @@ class Field:
 
         return value
 
-    def get_value(self, name, value, action):
+    def get_value(self, name, value):
         default = getattr(self, 'default', None)
         choices = getattr(self, 'choices', None)
 
         # Process the 'default' attribute
         if default is not None and not value:
+            # TODO: Process async default-functions
             value = default() if callable(default) else default
 
         # Process the 'choices' attribute
@@ -210,14 +211,6 @@ class DateTimeField(Field):
         self.null = null
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
-
-    def get_value(self, name, value, action):
-        if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
-            # MonogoDB rounds microseconds, and ODM does not request the created document,
-            # for data consistency I reset them
-            value = datetime.now().replace(microsecond=0)
-
-        return value
 
 
 class BaseRelationField(Field):
