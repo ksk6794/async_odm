@@ -407,7 +407,7 @@ class MongoModel(metaclass=BaseModel):
         return self.get_external_values(document)
 
     async def _validate(self, field_instance, field_name, field_value):
-        # Validate field value
+        # Validate field value by default validators
         field_value = field_instance.get_value(field_name, field_value, self._action)
         v = field_instance.validate
         is_coro = asyncio.iscoroutinefunction(v)
@@ -416,7 +416,7 @@ class MongoModel(metaclass=BaseModel):
         # Call Model child (custom) validate methods
         new_value = await self._child_validator(field_name)
 
-        # Set the post validate value
+        # Set the post-validate value
         if new_value is not None:
             field_value = new_value
 
