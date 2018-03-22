@@ -1,6 +1,7 @@
+from pymongo import DESCENDING, ASCENDING, InsertOne
+
 from .utils import update
 from .node import Q, QNode, QNot, QCombination
-from pymongo import DESCENDING, ASCENDING, InsertOne
 
 
 class InternalQuery:
@@ -101,7 +102,6 @@ class QuerySet:
         return document
 
     async def update(self, **kwargs):
-        # internal_values = {}
         # await self.model.get_dispatcher().update_many(self._filter, **internal_values)
 
         for odm_object in await self.model.objects.filter(**self._filter):
