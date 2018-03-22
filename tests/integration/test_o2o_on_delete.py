@@ -27,9 +27,6 @@ class Address(MongoModel):
 
 
 class SeveralRelationsTests(BaseAsyncTestCase):
-    def setUp(self):
-        pass
-
     async def test_o2o_on_delete(self):
         user = await User.objects.create(username='Mike')
         await UserProfile.objects.create(user=user)
@@ -43,7 +40,6 @@ class SeveralRelationsTests(BaseAsyncTestCase):
         profiles_count = await UserProfile.objects.count()
         self.assertEqual(profiles_count, 0)
 
-        # TODO: Address user doesn't sets to null
         address = await Address.objects.get(data='text...')
         self.assertIsNone(address.user)
         await address.delete()

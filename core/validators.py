@@ -1,3 +1,5 @@
+from bson import DBRef
+
 from core.exceptions import ValidationError
 
 
@@ -68,7 +70,7 @@ class FieldValidator:
 
     @Inject('null')
     def validate_null(self, null):
-        if null is True and self.value is None:
+        if null is False and self.value is None:
             raise ValidationError(
                 'Field `{field_name}` can not be null'.format(
                     field_name=self.name
@@ -95,3 +97,17 @@ class FieldValidator:
                                 length=min_length
                             ), self.is_sub_field
                         )
+
+    async def validate_rel(self):
+        document_id = getattr(self.value, '_id', self.value)
+
+        # For consistency check if exist related object in the database
+        if document_id is not None:
+            if not await self.field_instance.relation.objects.filter(_id=document_id).count():
+                raise ValueError(
+                    'Relation document with ObjectId(\'{document_id}\') does not exist.\n'
+                    'Model: \'{model_name}\', Field: \'{field_name}\''.format(
+                        document_id=str(document_id),
+                        model_name=self.__class__.__name__,
+                        field_name=self.name
+                    ))

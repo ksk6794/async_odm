@@ -49,11 +49,19 @@ class OnDeleteManager:
             field_name = field_instance.get_field_name()
             await field_instance.get_query().update(**{field_name: None})
 
-    # TODO: Test it!
     @staticmethod
     async def on_set_default(field_instance):
-        # TODO: Implement setting the default value
-        pass
+        if isinstance(field_instance, OneToOneBackward):
+            pass
+
+        elif isinstance(field_instance, ForeignKeyBackward):
+            field_name = field_instance.get_field_name()
+            default = field_instance.relation.get_declared_fields().get(field_name).default
+
+            if callable(default):
+                default = default()
+
+            await field_instance.get_query().update(**{field_name: default})
 
     async def analyze_backwards(self, obj=None, odm_objects=None):
         odm_objects = odm_objects if odm_objects is not None else [obj]

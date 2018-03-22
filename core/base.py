@@ -271,8 +271,14 @@ class MongoModel(metaclass=BaseModel):
                 field_value = __getattribute(self, '_id')
 
             if field_value is not None:
-                field_instance.set_field_value(field_value)
-                attr = field_instance
+                if isinstance(field_value, DBRef):
+                    field_value = field_value.id
+
+                if field_value:
+                    field_instance.set_field_value(field_value)
+                    attr = field_instance
+                else:
+                    attr = None
 
         return attr
 
@@ -297,12 +303,12 @@ class MongoModel(metaclass=BaseModel):
         return cls._get_management_param('dispatcher')
 
     @classmethod
-    def get_collection_name(cls):
-        return cls.get_dispatcher().collection_name
-
-    @classmethod
     def get_sorting(cls):
         return cls._get_management_param('sorting')
+
+    @classmethod
+    def get_collection_name(cls):
+        return cls.get_dispatcher().collection_name
 
     @classmethod
     def _get_management_param(cls, param):
@@ -344,28 +350,38 @@ class MongoModel(metaclass=BaseModel):
         """
         Convert external values to internal for saving to a database.
         """
-        fields_values = {}
+        internal_values = {}
 
         for field_name, field_instance in self.get_declared_fields().items():
             # Bring to internal values only modified fields (for update action)
             if self._action is UPDATE and field_name not in self._modified_fields:
                 continue
 
-            field_value = None
+            field_value = await self._validate(
+                field_instance=field_instance,
+                field_name=field_name,
+                field_value=self.__dict__.get(field_name)
+            )
+
+            internal_value = None
 
             if isinstance(field_instance, BaseRelationField):
-                field_value = await self._relation_field_to_internal(field_name, field_instance)
+                # Set the DBRef for the field value (create) or leave the same (update)
+                collection_name = field_instance.relation.get_collection_name()
+                document_id = getattr(field_value, '_id', field_value)
+                internal_value = DBRef(collection_name, document_id)
 
             elif isinstance(field_instance, Field):
-                field_value = await self._field_to_internal(field_name, field_instance)
+                # Bring to the internal value
+                internal_value = field_instance.to_internal_value(field_value)
 
-            fields_values[field_name] = field_value
+            internal_values[field_name] = internal_value
 
         # Undeclared fields are not validated
         undeclared = self._undeclared_fields
-        fields_values.update(undeclared)
+        internal_values.update(undeclared)
 
-        return fields_values
+        return internal_values
 
     async def _create(self):
         """
@@ -373,14 +389,12 @@ class MongoModel(metaclass=BaseModel):
         :return: dict
         """
         self._action = CREATE
-        field_values = await self.get_internal_values()
-        insert_result = await self.objects.internal_query.create_one(**field_values)
+        internal_values = await self.get_internal_values()
+        insert_result = await self.objects.internal_query.create_one(**internal_values)
 
         # Generate document from field_values and inserted_id
-        field_values.update({'_id': insert_result.inserted_id})
-        document = self.get_external_values(field_values)
-
-        return document
+        internal_values.update({'_id': insert_result.inserted_id})
+        return self.get_external_values(internal_values)
 
     async def _update(self):
         """
@@ -388,44 +402,16 @@ class MongoModel(metaclass=BaseModel):
         :return: dict
         """
         self._action = UPDATE
-        field_values = await self.get_internal_values()
-        document = await self.objects.internal_query.update_one(self._id, **field_values)
-        document = self.get_external_values(document)
+        internal_values = await self.get_internal_values()
+        document = await self.objects.internal_query.update_one(self._id, **internal_values)
+        return self.get_external_values(document)
 
-        return document
-
-    async def _relation_field_to_internal(self, field_name, field_instance):
-        """
-        Replace to relation ObjectId
-        """
-        field_value = self.__dict__.get(field_name)
-
-        # Set the DBRef for the field value (create) or leave the same (update)
-        collection_name = field_instance.relation.get_collection_name()
-        document_id = getattr(field_value, '_id', field_value)
-
-        # For consistency check if exist related object in the database
-        if document_id is not None:
-            if not await field_instance.relation.objects.filter(_id=document_id).count():
-                raise ValueError(
-                    'Relation document with ObjectId(\'{document_id}\') does not exist.\n'
-                    'Model: \'{model_name}\', Field: \'{field_name}\''.format(
-                        document_id=str(document_id),
-                        model_name=self.__class__.__name__,
-                        field_name=field_name
-                    ))
-
-            field_value = DBRef(collection_name, document_id)
-        else:
-            field_value = None
-
-        return field_value
-
-    async def _field_to_internal(self, field_name, field_instance):
+    async def _validate(self, field_instance, field_name, field_value):
         # Validate field value
-        field_value = self.__dict__.get(field_name)
         field_value = field_instance.get_value(field_name, field_value, self._action)
-        field_instance.validate(field_name, field_value)
+        v = field_instance.validate
+        is_coro = asyncio.iscoroutinefunction(v)
+        await v(field_name, field_value) if is_coro else v(field_name, field_value)
 
         # Call Model child (custom) validate methods
         new_value = await self._child_validator(field_name)
@@ -433,9 +419,6 @@ class MongoModel(metaclass=BaseModel):
         # Set the post validate value
         if new_value is not None:
             field_value = new_value
-
-        # Bring to the internal value
-        field_value = field_instance.to_internal_value(field_value)
 
         return field_value
 

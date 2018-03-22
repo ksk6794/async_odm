@@ -99,9 +99,7 @@ class Field:
         return value
 
     def validate(self, name, value):
-        field_validator = FieldValidator(self, name, value)
-        field_validator.validate()
-
+        FieldValidator(self, name, value).validate()
         return value
 
     def to_internal_value(self, value):
@@ -123,7 +121,7 @@ class Field:
 class BoolField(Field):
     field_type = bool
 
-    def __init__(self, null=False, default=None, choices=None):
+    def __init__(self, null=True, default=None, choices=None):
         self.null = null
         self.default = default
         self.choices = choices
@@ -132,7 +130,7 @@ class BoolField(Field):
 class StringField(Field):
     field_type = str
 
-    def __init__(self, null=False, blank=True, min_length=None, max_length=None,
+    def __init__(self, null=True, blank=True, min_length=None, max_length=None,
                  unique=False, index=None, default=None, choices=None):
         self.null = null
         self.blank = blank
@@ -147,7 +145,7 @@ class StringField(Field):
 class IntegerField(Field):
     field_type = int
 
-    def __init__(self, null=False, unique=False, default=None, choices=None):
+    def __init__(self, null=True, unique=False, default=None, choices=None):
         self.null = null
         self.unique = unique
         self.default = default
@@ -157,7 +155,7 @@ class IntegerField(Field):
 class FloatField(Field):
     field_type = float
 
-    def __init__(self, null=False, unique=False, default=None, choices=None):
+    def __init__(self, null=True, unique=False, default=None, choices=None):
         self.null = null
         self.unique = unique
         self.default = default
@@ -167,7 +165,7 @@ class FloatField(Field):
 class ListField(Field):
     field_type = list
 
-    def __init__(self, child=None, null=False, length=None, unique=False, default=None):
+    def __init__(self, child=None, null=True, length=None, unique=False, default=None):
         self.child = child
         self.null = null
         self.length = length
@@ -193,7 +191,7 @@ class ListField(Field):
 class DictField(Field):
     field_type = dict
 
-    def __init__(self, null=False, unique=False, min_length=None, max_length=None, default=None):
+    def __init__(self, null=True, unique=False, min_length=None, max_length=None, default=None):
         self.null = null
         self.unique = unique
         self.min_length = min_length
@@ -208,7 +206,7 @@ class DictField(Field):
 class DateTimeField(Field):
     field_type = datetime
 
-    def __init__(self, null=False, auto_now_create=False, auto_now_update=False):
+    def __init__(self, null=True, auto_now_create=False, auto_now_update=False):
         self.null = null
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
@@ -226,16 +224,16 @@ class BaseRelationField(Field):
     backward_class = None
     _query = None
 
-    def __init__(self, relation, related_name=None, null=False, on_delete=None):
+    def __init__(self, relation, related_name=None, default=None, null=True, on_delete=None):
         self.relation = relation
         self.related_name = related_name
+        self.default = default
         self.null = null
         self.on_delete = on_delete
 
     def __aiter__(self):
         return self
 
-    # TODO: Test it!
     async def __anext__(self):
         async for item in self._get_query():
             return item
@@ -246,6 +244,9 @@ class BaseRelationField(Field):
 
     def _get_query(self):
         raise NotImplementedError
+
+    async def validate(self, name, value):
+        await FieldValidator(self, name, value).validate_rel()
 
 
 class BaseBackwardRelationField(Field):
@@ -295,7 +296,7 @@ class ForeignKey(BaseRelationField):
     def _get_query(self):
         if not self._query:
             self._query = self.relation.objects.get(**{
-                '_id': self._value.id
+                '_id': self._value
             })
 
         return self._query
@@ -310,5 +311,5 @@ class OneToOne(BaseRelationField):
 
     def _get_query(self):
         return self.relation.objects.get(**{
-            '_id': self._value.id
+            '_id': self._value
         })

@@ -1,7 +1,7 @@
 from core.base import MongoModel
 from core.fields import StringField, ForeignKey
 from tests.base import BaseAsyncTestCase
-from core.constants import CASCADE, SET_NULL
+from core.constants import CASCADE, SET_NULL, SET_DEFAULT
 
 
 class User(MongoModel):
@@ -23,14 +23,11 @@ class Comment(MongoModel):
         collection_name = 'rel_fk_comment'
 
     post = ForeignKey(Post, related_name='comments', on_delete=SET_NULL)
-    author = ForeignKey(User, related_name='comments', on_delete=SET_NULL)
+    author = ForeignKey(User, related_name='comments', default=None, on_delete=SET_DEFAULT)
     content = StringField()
 
 
 class FKOnDeleteTests(BaseAsyncTestCase):
-    def setUp(self):
-        pass
-
     async def test_fk_on_delete(self):
         """
         The `on_delete` parameter specifies the behavior of the children when the parent is deleted:

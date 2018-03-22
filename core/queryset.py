@@ -1,4 +1,3 @@
-from core.managers import OnDeleteManager
 from .utils import update
 from .node import Q, QNode, QNot, QCombination
 from pymongo import DESCENDING, ASCENDING, InsertOne
@@ -102,8 +101,13 @@ class QuerySet:
         return document
 
     async def update(self, **kwargs):
-        result = await self.model.get_dispatcher().update_many(self._filter, **kwargs)
-        return result
+        # internal_values = {}
+        # await self.model.get_dispatcher().update_many(self._filter, **internal_values)
+
+        for odm_object in await self.model.objects.filter(**self._filter):
+            for field_name, field_value in kwargs.items():
+                setattr(odm_object, field_name, field_value)
+                await odm_object.save()
 
     def fields(self, **kwargs):
         available_operators = ('slice',)
@@ -138,6 +142,7 @@ class QuerySet:
             document = InsertOne(internal_values)
             documents.append(document)
 
+        # TODO: Return all created objects
         await self.model.get_dispatcher().bulk_create(documents)
 
     def _recursive_invert(self, q_item):
@@ -235,7 +240,6 @@ class QuerySet:
     def __aiter__(self):
         return self
 
-    # TODO: Test it!
     async def __anext__(self):
         async for document in await self.cursor:
             return self._to_object(document)
