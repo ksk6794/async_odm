@@ -98,7 +98,7 @@ class RelationManager:
         # Add backward relation by related_name argument
         declared_fields = rel_model.get_declared_fields()
         declared_fields[related_name] = backward_relation
-        rel_model._management.has_backwards = True
+        rel_model.has_backwards = True
         pass
 
     def _handle_waited_relations(self):
