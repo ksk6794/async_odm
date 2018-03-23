@@ -1,7 +1,6 @@
 import os
 import re
 import copy
-from datetime import datetime
 
 import asyncio
 import importlib
@@ -356,16 +355,8 @@ class MongoModel(metaclass=BaseModel):
             if action is UPDATE and field_name not in modified:
                 continue
 
-            field_value = field_instance.get_value(
-                name=field_name,
-                value=field_values.get(field_name)
-            )
-
-            field_value = await cls._validate(
-                field_instance=field_instance,
-                field_name=field_name,
-                field_value=field_value
-            )
+            value = field_instance.process_value(field_values.get(field_name), action)
+            field_value = await cls._validate(field_instance, field_name, value)
 
             internal_value = None
 
@@ -378,13 +369,6 @@ class MongoModel(metaclass=BaseModel):
             elif isinstance(field_instance, Field):
                 # Bring to the internal value
                 internal_value = field_instance.to_internal_value(field_value)
-
-                if isinstance(field_instance, DateTimeField):
-                    if (action is CREATE and field_instance.auto_now_create) or (
-                                    action is UPDATE and field_instance.auto_now_update) and not field_value:
-                        # MonogoDB rounds microseconds, and ODM does not request the created document,
-                        # for data consistency I reset them
-                        internal_value = datetime.now().replace(microsecond=0)
 
             internal_values[field_name] = internal_value
 

@@ -1,5 +1,3 @@
-from bson import DBRef
-
 from core.exceptions import ValidationError
 
 

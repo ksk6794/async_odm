@@ -59,9 +59,7 @@ class Field:
 
             elif value not in choices.values():
                 raise ValueError(
-                    'The value \'{field_value}\' is not specified in the \'choices\' attribute.'.format(
-                        field_value=value
-                    )
+                    f'The value \'{value}\' is not specified in the \'choices\' attribute.'
                 )
 
         return value
@@ -75,16 +73,14 @@ class Field:
 
             if key not in choices.keys():
                 raise ValueError(
-                    'The value \'{field_value}\' is not specified in the \'choices\' attribute.'.format(
-                        field_value=key
-                    )
+                    f'The value \'{key}\' is not specified in the \'choices\' attribute.'
                 )
 
             value = choices.get(key)
 
         return value
 
-    def get_value(self, name, value):
+    def process_value(self, value, action=None):
         default = getattr(self, 'default', None)
         choices = getattr(self, 'choices', None)
 
@@ -211,6 +207,15 @@ class DateTimeField(Field):
         self.null = null
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
+
+    def process_value(self, value, action=None):
+        if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
+            # MonogoDB rounds microseconds,
+            # and ODM does not request the created document,
+            # for data consistency I reset them
+            value = datetime.now().replace(microsecond=0)
+
+        return value
 
 
 class BaseRelationField(Field):

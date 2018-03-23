@@ -137,6 +137,7 @@ class QuerySet:
         documents = []
 
         for document in args:
+            # TODO: Define the modified fields
             internal_values = await document.get_internal_values(
                 action=CREATE,
                 field_values=document.__dict__,
@@ -215,7 +216,9 @@ class QuerySet:
             self._skip = item.start
             self._limit = item.stop
         else:
-            raise TypeError(f'\'{self.__class__.__name__}\' object does not support indexing')
+            raise TypeError(
+                f'\'{self.__class__.__name__}\' object does not support indexing'
+            )
 
         return self
 
