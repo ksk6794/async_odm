@@ -83,7 +83,7 @@ class Field:
         choices = getattr(self, 'choices', None)
 
         # Process the 'default' attribute
-        if default is not None and not value:
+        if value is None:
             value = await default() if iscoroutinefunction(default) else default() if callable(default) else default
 
         # Process the 'choices' attribute
