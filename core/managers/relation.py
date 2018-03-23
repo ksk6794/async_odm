@@ -1,4 +1,5 @@
 from collections import namedtuple
+
 from core.fields import BaseRelationField
 
 

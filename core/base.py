@@ -12,7 +12,7 @@ from .queryset import QuerySet
 from .utils import classproperty
 from .dispatchers import MongoDispatcher
 from .constants import UPDATE, CREATE
-from .fields import Field, BaseRelationField, BaseBackwardRelationField, DateTimeField
+from .fields import Field, BaseRelationField, BaseBackwardRelationField
 
 
 class ModelManagement:
