@@ -153,9 +153,7 @@ class BaseModel(type):
             if isinstance(field_instance, Field):
                 if '__' in field_name:
                     raise AttributeError(
-                        'You can not use `__` in the field name {field_name}'.format(
-                            field_name=field_name
-                        )
+                        f'You can not use `__` in the field name {field_name}'
                     )
 
                 declared_fields[field_name] = field_instance
@@ -191,10 +189,7 @@ class MongoModel(metaclass=BaseModel):
         self.__dict__.update(document)
 
     def __repr__(self):
-        return '{model_name} _id: {document_id}'.format(
-            model_name=self.__class__.__name__,
-            document_id=self.__dict__.get('_id')
-        )
+        return f'{self.__class__.__name__} _id: {self.__dict__.get("_id")}'
 
     def __setattr__(self, key, value):
         # Ignore private properties
@@ -211,10 +206,7 @@ class MongoModel(metaclass=BaseModel):
 
         if not match:
             raise AttributeError(
-                '\'{model_name}\' model has no attribute \'{attribute}\''.format(
-                    model_name=self.__class__.__name__,
-                    attribute=item
-                )
+                f'\'{self.__class__.__name__}\' model has no attribute \'{item}\''
             )
 
         field_name = match.group('field_name')
@@ -222,9 +214,7 @@ class MongoModel(metaclass=BaseModel):
 
         if field_name not in declared_fields:
             raise AttributeError(
-                'Field \'{field_name}\' is not declared'.format(
-                    field_name=field_name
-                )
+                f'Field \'{field_name}\' is not declared'
             )
 
         field_instance = declared_fields.get(field_name)
@@ -232,9 +222,7 @@ class MongoModel(metaclass=BaseModel):
 
         if not choices:
             raise AttributeError(
-                'Field \'{field_name}\' has not attribute \'choices\''.format(
-                    field_name=field_name
-                )
+                f'Field \'{field_name}\' has not attribute \'choices\''
             )
 
         # Closure is used to make get_FOO_display callable
