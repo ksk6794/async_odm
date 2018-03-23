@@ -1,3 +1,4 @@
+from asyncio import iscoroutinefunction
 from datetime import datetime
 from core.validators import FieldValidator
 from .constants import CREATE, UPDATE
@@ -80,14 +81,13 @@ class Field:
 
         return value
 
-    def process_value(self, value, action=None):
+    async def process_value(self, value, action=None):
         default = getattr(self, 'default', None)
         choices = getattr(self, 'choices', None)
 
         # Process the 'default' attribute
         if default is not None and not value:
-            # TODO: Process async default-functions
-            value = default() if callable(default) else default
+            value = await default() if iscoroutinefunction(default) else default() if callable(default) else default
 
         # Process the 'choices' attribute
         if value and choices:
@@ -208,7 +208,7 @@ class DateTimeField(Field):
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
 
-    def process_value(self, value, action=None):
+    async def process_value(self, value, action=None):
         if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
             # MonogoDB rounds microseconds,
             # and ODM does not request the created document,

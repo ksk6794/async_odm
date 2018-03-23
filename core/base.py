@@ -355,7 +355,7 @@ class MongoModel(metaclass=BaseModel):
             if action is UPDATE and field_name not in modified:
                 continue
 
-            value = field_instance.process_value(field_values.get(field_name), action)
+            value = await field_instance.process_value(field_values.get(field_name), action)
             field_value = await cls._validate(field_instance, field_name, value)
 
             internal_value = None
@@ -433,7 +433,7 @@ class MongoModel(metaclass=BaseModel):
         :return: validated data
         """
         new_value = None
-        validator = getattr(cls, 'validate_{}'.format(field_name), None)
+        validator = getattr(cls, f'validate_{field_name}', None)
 
         if callable(validator):
             is_coro = asyncio.iscoroutinefunction(validator)

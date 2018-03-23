@@ -50,29 +50,24 @@ class FieldValidator:
         if self.name and self.value is not None:
             if self.field_type and not isinstance(self.value, self.field_type):
                 raise ValidationError(
-                    'Field `{field_name} has wrong type! '
-                    'Expected {field_type}`'.format(
-                        field_name=self.name,
-                        field_type=self.field_type.__name__
-                    ), self.is_sub_field
+                    f'Field `{self.name} has wrong type! Expected {self.field_type.__name__}`',
+                    self.is_sub_field
                 )
 
     @Inject('blank')
     def validate_blank(self, blank):
         if blank is False and self.value == '':
             raise ValidationError(
-                'Field `{field_name}` can not be blank'.format(
-                    field_name=self.name
-                ), self.is_sub_field
+                f'Field `{self.name}` can not be blank',
+                self.is_sub_field
             )
 
     @Inject('null')
     def validate_null(self, null):
         if null is False and self.value is None:
             raise ValidationError(
-                'Field `{field_name}` can not be null'.format(
-                    field_name=self.name
-                ), self.is_sub_field
+                f'Field `{self.name}` can not be null',
+                self.is_sub_field
             )
 
     @Inject('min_length', 'max_length')
@@ -82,18 +77,14 @@ class FieldValidator:
                 if hasattr(self.value, '__len__'):
                     if max_length and len(self.value) > max_length:
                         raise ValidationError(
-                            'Field `{field_name}` exceeds the max length {length}'.format(
-                                field_name=self.name,
-                                length=max_length
-                            ), self.is_sub_field
+                            f'Field `{self.name}` exceeds the max length {max_length}',
+                            self.is_sub_field
                         )
 
                     elif min_length and len(self.value) < min_length:
                         raise ValidationError(
-                            'Field `{field_name}` exceeds the min length {length}'.format(
-                                field_name=self.name,
-                                length=min_length
-                            ), self.is_sub_field
+                            f'Field `{self.name}` exceeds the min length {min_length}',
+                            self.is_sub_field
                         )
 
     async def validate_rel(self):
@@ -103,9 +94,6 @@ class FieldValidator:
         if document_id is not None:
             if not await self.field_instance.relation.objects.filter(_id=document_id).count():
                 raise ValueError(
-                    'Relation document with ObjectId(\'{document_id}\') does not exist.\n'
-                    'Model: \'{model_name}\', Field: \'{field_name}\''.format(
-                        document_id=str(document_id),
-                        model_name=self.__class__.__name__,
-                        field_name=self.name
-                    ))
+                    f'Relation document with ObjectId(\'{str(document_id)}\') does not exist.\n'
+                    f'Model: \'{self.__class__.__name__}\', Field: \'{self.name}\''
+                )
