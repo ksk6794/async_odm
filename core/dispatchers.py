@@ -62,7 +62,7 @@ class MongoDispatcher:
             raise DoesNotExist('Document does not exists!')
 
         elif count > 1:
-            raise MultipleObjectsReturned('Got more than 1 document - it returned {count}'.format(count=count))
+            raise MultipleObjectsReturned(f'Got more than 1 document - it returned {count}')
 
     async def find(self, **kwargs):
         collection = await self.get_collection()

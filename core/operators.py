@@ -3,10 +3,10 @@ from core.exceptions import QuerysetError
 
 class Operator:
     def process(self, operator, field_name, value):
-        method = getattr(self, 'op_{}'.format(operator), None)
+        method = getattr(self, f'op_{operator}', None)
 
         if not callable(method):
-            raise QuerysetError('Unknown condition `{operator}`'.format(operator=operator))
+            raise QuerysetError(f'Unknown condition `{operator}`')
 
         return method(field_name, value)
 
@@ -19,7 +19,7 @@ class Operator:
     @staticmethod
     def op_rel(field_name, value):
         # Set the id of the related document
-        field_name = '{}.$id'.format(field_name)
+        field_name = f'{field_name}.$id'
         field_value = getattr(value, '_id') if hasattr(value, '_id') else value
 
         return {

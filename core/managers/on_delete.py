@@ -14,7 +14,7 @@ class OnDeleteManager:
             SET_DEFAULT: 'set_default'
         }
         action_name = actions_names.get(action)
-        method = getattr(self, 'on_{}'.format(action_name), None)
+        method = getattr(self, f'on_{action_name}', None)
 
         if callable(method):
             await method(field_instance)

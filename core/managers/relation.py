@@ -89,7 +89,7 @@ class RelationManager:
         field_instance.relation = rel_model
 
         # If the parameter `related_name` is not specified - (collection name)_set
-        related_name = field_instance.related_name or '{}_set'.format(model.get_collection_name())
+        related_name = field_instance.related_name or f'{model.get_collection_name()}_set'
 
         # Add a field to retrieve referring objects to the current object
         backward_relation = field_instance.backward_class(model)

@@ -28,11 +28,8 @@ class Field:
 
             if value is not None and not isinstance(value, required_type):
                 raise TypeError(
-                    'Reserved attr `{attr_name}` has wrong type! '
-                    'Expected `{attr_type}`'.format(
-                        attr_name=key,
-                        attr_type=required_type.__name__
-                    )
+                    f'Reserved attr `{key}` has wrong type! '
+                    f'Expected `{required_type.__name__}`'
                 )
 
         super().__setattr__(key, value)
