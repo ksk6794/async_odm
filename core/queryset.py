@@ -1,6 +1,6 @@
 from pymongo import DESCENDING, ASCENDING, InsertOne
 
-from core.constants import CREATE
+from core.constants import CREATE, UPDATE
 from .utils import update
 from .node import Q, QNode, QNot, QCombination
 
@@ -103,12 +103,18 @@ class QuerySet:
         return document
 
     async def update(self, **kwargs):
-        # await self.model.get_dispatcher().update_many(self._filter, **internal_values)
+        declared_fields = set(self.model.get_declared_fields().keys())
+        to_update_fields = set(kwargs.keys())
+        modified = list(declared_fields & to_update_fields)
+        undeclared = {k: v for k, v in kwargs.items() if k in to_update_fields - declared_fields}
 
-        for odm_object in await self.model.objects.filter(**self._filter):
-            for field_name, field_value in kwargs.items():
-                setattr(odm_object, field_name, field_value)
-                await odm_object.save()
+        internal_values = await self.model.get_internal_values(
+            action=UPDATE,
+            field_values=kwargs,
+            modified=modified,
+            undeclared=undeclared
+        )
+        await self.model.get_dispatcher().update_many(self._filter, **internal_values)
 
     def fields(self, **kwargs):
         available_operators = ('slice',)
@@ -137,7 +143,6 @@ class QuerySet:
         documents = []
 
         for document in args:
-            # TODO: Define the modified fields
             internal_values = await document.get_internal_values(
                 action=CREATE,
                 field_values=document.__dict__,
