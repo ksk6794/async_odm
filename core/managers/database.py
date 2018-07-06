@@ -1,5 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
+from core.exceptions import SettingsError
+
 
 class DatabaseManager:
     _instance = None
@@ -18,6 +20,13 @@ class DatabaseManager:
 
     def get_db_name(self, alias):
         db_settings = self._db_settings.get(alias)
+
+        if not db_settings:
+            raise SettingsError(
+                f'Can\'t find settings for \'{alias}\' database! '
+                f'Please, specify the \'{alias}\' database in your settings module.'
+            )
+
         return db_settings.get('database')
 
     async def get_database(self, alias):
