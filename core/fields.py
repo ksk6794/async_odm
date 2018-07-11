@@ -1,6 +1,8 @@
 from asyncio import iscoroutinefunction
 from datetime import datetime
-from core.validators import FieldValidator
+from typing import AnyStr, Any, Awaitable
+
+from .validators import FieldValidator
 from .constants import CREATE, UPDATE
 
 
@@ -34,19 +36,19 @@ class Field:
 
         super().__setattr__(key, value)
 
-    def set_field_name(self, name):
+    def set_field_name(self, name: AnyStr):
         self._name = name
 
-    def get_field_name(self):
+    def get_field_name(self) -> AnyStr:
         return self._name
 
-    def set_field_value(self, value):
+    def set_field_value(self, value: Any):
         self._value = value
 
-    def get_field_value(self):
+    def get_field_value(self) -> Any:
         return self._value
 
-    def get_choice_key(self, value):
+    def get_choice_key(self, value: Any) -> Any:
         choices = getattr(self, 'choices', None)
 
         if choices:
@@ -62,7 +64,7 @@ class Field:
 
         return value
 
-    def get_choice_value(self, key):
+    def get_choice_value(self, key: AnyStr) -> Any:
         choices = getattr(self, 'choices', None)
         value = key
 
@@ -78,7 +80,7 @@ class Field:
 
         return value
 
-    async def process_value(self, value, action=None):
+    async def process_value(self, value: Any, action=None) -> Any:
         default = getattr(self, 'default', None)
         choices = getattr(self, 'choices', None)
 
@@ -92,18 +94,18 @@ class Field:
 
         return value
 
-    def validate(self, name, value):
+    def validate(self, name: AnyStr, value: Any) -> Any:
         FieldValidator(self, name, value).validate()
         return value
 
-    def to_internal_value(self, value):
+    def to_internal_value(self, value: Any) -> Any:
         """
         Define this method if you need to save specific data format.
         Here you must to serialize your data.
         """
         return value
 
-    def to_external_value(self, value):
+    def to_external_value(self, value: Any) -> Any:
         """
         Define this method if you specified `to_internal_value`,
         to represent data from the storage.
@@ -205,7 +207,7 @@ class DateTimeField(Field):
         self.auto_now_create = auto_now_create
         self.auto_now_update = auto_now_update
 
-    async def process_value(self, value, action=None):
+    async def process_value(self, value, action: CREATE | UPDATE=None):
         if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
             # MonogoDB rounds microseconds,
             # and ODM does not request the created document,
@@ -261,7 +263,7 @@ class BaseBackwardRelationField(Field):
             return item
         raise StopAsyncIteration()
 
-    def __await__(self):
+    def __await__(self) -> Awaitable:
         return self.get_query().__await__()
 
 

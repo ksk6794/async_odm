@@ -1,4 +1,3 @@
-from pymongo.errors import OperationFailure
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
 from core.exceptions import IndexCollectionError

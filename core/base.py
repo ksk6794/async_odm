@@ -1,10 +1,12 @@
 import os
 import re
 import copy
-
 import asyncio
 import importlib
-from bson import DBRef
+from types import ModuleType
+from typing import Any, AnyStr, List, Dict, Tuple
+
+from bson import DBRef, ObjectId
 
 from .exceptions import SettingsError, ValidationError
 from .managers import RelationManager, OnDeleteManager, DatabaseManager, IndexManager
@@ -41,11 +43,10 @@ class BaseModel(type):
 
         model = super().__new__(mcs, name, bases, attrs)
 
-        if not mcs._is_abstract(attrs) and model.__name__ != 'MongoModel':
+        if not mcs._is_abstract(attrs):
             RelationManager().add_model(model)
 
             if getattr(mcs.settings, 'AUTO_INSPECT', True) is True:
-                pass
                 loop = asyncio.get_event_loop()
                 task = IndexManager().process(model)
                 loop.run_until_complete(task)
@@ -66,7 +67,7 @@ class BaseModel(type):
         return mcs._db_manager
 
     @classproperty
-    def settings(mcs) -> object:
+    def settings(mcs) -> ModuleType:
         env_var = 'ODM_SETTINGS_MODULE'
         settings_module = os.environ.get(env_var)
 
@@ -79,19 +80,19 @@ class BaseModel(type):
             raise SettingsError('Can not import settings module, make sure the path is correct.')
 
     @classmethod
-    def _is_abstract(mcs, attrs: []) -> bool:
+    def _is_abstract(mcs, attrs: Dict) -> bool:
         return bool(getattr(attrs.get('Meta'), 'abstract', None))
 
     @classmethod
-    def _get_model_module(mcs, name: str, attrs: []) -> str:
+    def _get_model_module(mcs, name: AnyStr, attrs: Dict) -> AnyStr:
         return '.'.join((attrs.get('__module__'), name))
 
     @classmethod
-    def _get_db_alias(cls, attrs):
+    def _get_db_alias(mcs, attrs):
         return getattr(attrs.get('Meta'), 'db', 'default')
 
     @classmethod
-    def _get_dispatcher(mcs, name: str, attrs: []) -> MongoDispatcher:
+    def _get_dispatcher(mcs, name: AnyStr, attrs: []) -> MongoDispatcher:
         """
         Get the dispatcher - the driver that organizes queries to the database.
         """
@@ -106,7 +107,7 @@ class BaseModel(type):
         return dispatcher
 
     @classmethod
-    def _get_collection_name(mcs, name: str, attrs: []) -> str:
+    def _get_collection_name(mcs, name: AnyStr, attrs: Dict) -> AnyStr:
         """
         Get the collection name or generate it by the model class name.
         """
@@ -136,14 +137,14 @@ class BaseModel(type):
         return collection_name
 
     @classmethod
-    def _get_sorting(mcs, attrs: []) -> tuple:
+    def _get_sorting(mcs, attrs: Dict) -> Tuple:
         """
         Get sorting attribute from the Meta.
         """
         return None if mcs._is_abstract(attrs) else getattr(attrs.get('Meta'), 'sorting', ())
 
     @classmethod
-    def _get_declared_fields(mcs, bases: tuple, attrs: []) -> dict:
+    def _get_declared_fields(mcs, bases: Tuple, attrs: Dict) -> Dict:
         """
         Get the collection fields, declared by the user when designing the model.
         """
@@ -168,6 +169,9 @@ class BaseModel(type):
 
 
 class MongoModel(metaclass=BaseModel):
+    class Meta:
+        abstract = True
+
     _id = None
     _management = None
 
@@ -269,35 +273,35 @@ class MongoModel(metaclass=BaseModel):
         return attr
 
     @classproperty
-    def objects(cls):
+    def objects(cls) -> QuerySet:
         return QuerySet(model=cls)
 
     @property
-    def id(self):
+    def id(self) -> ObjectId:
         return self._id
 
     @classproperty
-    def has_backwards(cls):
+    def has_backwards(cls) -> bool:
         return cls._get_management_param('has_backwards')
 
     @classmethod
-    def get_declared_fields(cls):
+    def get_declared_fields(cls) -> Dict:
         return cls._get_management_param('declared_fields')
 
     @classmethod
-    def get_dispatcher(cls):
+    def get_dispatcher(cls) -> MongoDispatcher:
         return cls._get_management_param('dispatcher')
 
     @classmethod
-    def get_sorting(cls):
+    def get_sorting(cls) -> Tuple:
         return cls._get_management_param('sorting')
 
     @classmethod
-    def get_collection_name(cls):
+    def get_collection_name(cls) -> AnyStr:
         return cls.get_dispatcher().collection_name
 
     @classmethod
-    def _get_management_param(cls, param):
+    def _get_management_param(cls, param: AnyStr) -> Any:
         return getattr(cls._management, param, None)
 
     async def save(self):
@@ -313,7 +317,7 @@ class MongoModel(metaclass=BaseModel):
         # Remove document id from the ODM object
         self._id = None
 
-    def get_external_values(self, document):
+    def get_external_values(self, document: Dict) -> Dict:
         """
         Convert internal values to external for representation to user.
         :param document: dict
@@ -332,7 +336,7 @@ class MongoModel(metaclass=BaseModel):
         return document
 
     @classmethod
-    async def get_internal_values(cls, action, field_values, modified, undeclared):
+    async def get_internal_values(cls, action: CREATE | UPDATE, field_values: Dict, modified: List, undeclared: Dict):
         """
         Convert external values to internal for saving to a database.
         """
@@ -398,7 +402,7 @@ class MongoModel(metaclass=BaseModel):
         return self.get_external_values(document)
 
     @classmethod
-    async def _validate(cls, field_instance, field_name, field_value):
+    async def _validate(cls, field_instance: Field, field_name: AnyStr, field_value: Any) -> Any:
         # Validate field value by default validators
         v = field_instance.validate
         is_coro = asyncio.iscoroutinefunction(v)
@@ -414,11 +418,9 @@ class MongoModel(metaclass=BaseModel):
         return field_value
 
     @classmethod
-    async def _child_validator(cls, field_name, field_value):
+    async def _child_validator(cls, field_name: AnyStr, field_value: Any) -> Any:
         """
         Call user-defined validation methods.
-        :param field_name: str
-        :return: validated data
         """
         new_value = None
         validator = getattr(cls, f'validate_{field_name}', None)
