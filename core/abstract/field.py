@@ -16,6 +16,7 @@ class BaseField:
     _is_subfield = False
 
     def __init__(self, **kwargs):
+        # Get default values for field attributes
         options = {arg: getattr(self, arg, None) for arg in get_type_hints(self)}
         options.update(kwargs)
         self.__dict__.update(options)
