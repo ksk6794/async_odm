@@ -15,15 +15,15 @@ class Post(MongoModel):
     class Meta:
         collection_name = 'rel_fk_post'
 
-    author = ForeignKey(User, related_name='posts', on_delete=CASCADE)
+    author = ForeignKey(relation=User, related_name='posts', on_delete=CASCADE)
 
 
 class Comment(MongoModel):
     class Meta:
         collection_name = 'rel_fk_comment'
 
-    post = ForeignKey(Post, related_name='comments', on_delete=SET_NULL)
-    author = ForeignKey(User, related_name='comments', default=None, on_delete=SET_DEFAULT)
+    post = ForeignKey(relation=Post, related_name='comments', on_delete=SET_NULL)
+    author = ForeignKey(relation=User, related_name='comments', default=None, on_delete=SET_DEFAULT)
     content = StringField()
 
 

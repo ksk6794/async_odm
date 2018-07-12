@@ -27,7 +27,7 @@ class CollectionError(Exception):
 
 
 class ValidationError(Exception):
-    def __init__(self, message, is_sub_field=False):
+    def __init__(self, message, is_subfield=False):
         sub_text = ' (Sub-field exception)'
-        message = message + sub_text if is_sub_field else message
+        message = message + sub_text if is_subfield else message
         super().__init__(message)

@@ -10,7 +10,7 @@ class User(MongoModel):
     age = IntegerField()
     billing = FloatField()
     addresses = ListField()
-    list_subfield = ListField(StringField(max_length=3))
+    list_subfield = ListField(child=StringField(max_length=3))
     data = DictField()
     registered = DateTimeField()
     is_active = BoolField()

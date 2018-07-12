@@ -1,63 +1,63 @@
 from datetime import datetime
+from typing import Any, Sequence, Optional
 
-from core.abstract.field import BaseRelationField, BaseBackwardRelationField
+from .abstract.field import BaseRelationField, BaseBackwardRelationField
 from .abstract.field import BaseField
 from .constants import CREATE, UPDATE
 
 
 class BoolField(BaseField):
-    field_type = bool
+    class Meta:
+        field_type = bool
 
-    def __init__(self, null=True, default=None, choices=None):
-        self.null = null
-        self.default = default
-        self.choices = choices
+    null: bool = True
+    default: Any
+    choices: Optional[Sequence]
 
 
 class StringField(BaseField):
-    field_type = str
+    class Meta:
+        field_type = str
 
-    def __init__(self, null=True, blank=True, min_length=None, max_length=None,
-                 unique=False, index=None, default=None, choices=None):
-        self.null = null
-        self.blank = blank
-        self.min_length = min_length
-        self.max_length = max_length
-        self.unique = unique
-        self.index = index
-        self.default = default
-        self.choices = choices
+    null: bool = True
+    blank: bool = True
+    min_length: Optional[int]
+    max_length: Optional[int]
+    unique: bool = False
+    index: Optional[Any]
+    default: Optional[Any]
+    choices: Optional[Sequence]
 
 
 class IntegerField(BaseField):
-    field_type = int
+    class Meta:
+        field_type = int
 
-    def __init__(self, null=True, unique=False, default=None, choices=None):
-        self.null = null
-        self.unique = unique
-        self.default = default
-        self.choices = choices
+    null: bool = True
+    unique: bool = False
+    default: Optional[Any]
+    choices: Optional[Sequence]
 
 
 class FloatField(BaseField):
-    field_type = float
+    class Meta:
+        field_type = float
 
-    def __init__(self, null=True, unique=False, default=None, choices=None):
-        self.null = null
-        self.unique = unique
-        self.default = default
-        self.choices = choices
+    null: bool = True
+    unique: bool = False
+    default: Optional[Any]
+    choices: Optional[Sequence]
 
 
 class ListField(BaseField):
-    field_type = list
+    class Meta:
+        field_type = list
 
-    def __init__(self, child=None, null=True, length=None, unique=False, default=None):
-        self.child = child
-        self.null = null
-        self.length = length
-        self.unique = unique
-        self.default = default
+    child: Optional[Any]
+    null: bool = True
+    length: Optional[int]
+    unique: bool = False
+    default: Optional[Any]
 
     # For IDE tips
     def __iter__(self):
@@ -69,21 +69,21 @@ class ListField(BaseField):
         # TODO: use multiprocessing pool of workers
         if value and self.child is not None:
             for list_item in value:
-                self.child.is_sub_field = True
+                self.child.is_subfield = True
                 self.child.validate(name, list_item)
 
         return value
 
 
 class DictField(BaseField):
-    field_type = dict
+    class Meta:
+        field_type = dict
 
-    def __init__(self, null=True, unique=False, min_length=None, max_length=None, default=None):
-        self.null = null
-        self.unique = unique
-        self.min_length = min_length
-        self.max_length = max_length
-        self.default = default
+    null: bool = True
+    unique: bool = False
+    min_length: Optional[int]
+    max_length: Optional[int]
+    default: Any
 
     # For IDE tips
     def __iter__(self):
@@ -91,14 +91,14 @@ class DictField(BaseField):
 
 
 class DateTimeField(BaseField):
-    field_type = datetime
+    class Meta:
+        field_type = datetime
 
-    def __init__(self, null=True, auto_now_create=False, auto_now_update=False):
-        self.null = null
-        self.auto_now_create = auto_now_create
-        self.auto_now_update = auto_now_update
+    null: bool = True
+    auto_now_create: bool = False
+    auto_now_update: bool = False
 
-    async def process_value(self, value, action: CREATE | UPDATE=None):
+    async def process_value(self, value, action: int=None):
         if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
             # MonogoDB rounds microseconds,
             # and ODM does not request the created document,
@@ -131,6 +131,12 @@ class OneToOneBackward(BaseBackwardRelationField):
 class ForeignKey(BaseRelationField):
     backward_class = ForeignKeyBackward
 
+    relation: Any
+    related_name: Optional[str]
+    default: Optional[Any]
+    null: bool = True
+    on_delete: Optional[int]
+
     def _get_query(self):
         if not self._query:
             self._query = self.relation.objects.get(**{
@@ -143,9 +149,12 @@ class ForeignKey(BaseRelationField):
 class OneToOne(BaseRelationField):
     backward_class = OneToOneBackward
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.unique = True
+    relation: Any
+    related_name: Optional[str]
+    default: Optional[Any]
+    null: bool = True
+    on_delete: Optional[int]
+    unique: bool = True
 
     def _get_query(self):
         return self.relation.objects.get(**{

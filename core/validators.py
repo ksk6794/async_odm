@@ -29,16 +29,17 @@ class Inject:
 class FieldValidator:
     def __init__(self, field_instance, name, value):
         self.field_instance = field_instance
+
         self.name = name
         self.value = value
 
     @property
     def field_type(self):
-        return self.field_instance.field_type
+        return self.field_instance.Meta.field_type
 
     @property
-    def is_sub_field(self):
-        return self.field_instance.is_sub_field
+    def is_subfield(self):
+        return self.field_instance.is_subfield
 
     def validate(self):
         self.validate_type()
@@ -51,7 +52,7 @@ class FieldValidator:
             if self.field_type and not isinstance(self.value, self.field_type):
                 raise ValidationError(
                     f'Field `{self.name} has wrong type! Expected {self.field_type.__name__}`',
-                    self.is_sub_field
+                    self.is_subfield
                 )
 
     @Inject('blank')
@@ -59,7 +60,7 @@ class FieldValidator:
         if blank is False and self.value == '':
             raise ValidationError(
                 f'Field `{self.name}` can not be blank',
-                self.is_sub_field
+                self.is_subfield
             )
 
     @Inject('null')
@@ -67,7 +68,7 @@ class FieldValidator:
         if null is False and self.value is None:
             raise ValidationError(
                 f'Field `{self.name}` can not be null',
-                self.is_sub_field
+                self.is_subfield
             )
 
     @Inject('min_length', 'max_length')
@@ -78,13 +79,13 @@ class FieldValidator:
                     if max_length and len(self.value) > max_length:
                         raise ValidationError(
                             f'Field `{self.name}` exceeds the max length {max_length}',
-                            self.is_sub_field
+                            self.is_subfield
                         )
 
                     elif min_length and len(self.value) < min_length:
                         raise ValidationError(
                             f'Field `{self.name}` exceeds the min length {min_length}',
-                            self.is_sub_field
+                            self.is_subfield
                         )
 
     async def validate_rel(self):

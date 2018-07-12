@@ -276,7 +276,7 @@ class MongoModel(metaclass=BaseModel):
         if callable(validator):
             is_coro = asyncio.iscoroutinefunction(validator)
             new_value = await validator(value=field_value) if is_coro else validator(value=field_value)
-            field_type = cls.get_declared_fields().get(field_name).field_type
+            field_type = cls.get_declared_fields().get(field_name).Meta.field_type
 
             # The validator must return a value in the type of the specified model field.
             if not isinstance(new_value, field_type):

@@ -15,14 +15,14 @@ class UserProfile(MongoModel):
     class Meta:
         collection_name = 'rel_o2o_user_profile'
 
-    user = OneToOne(User, related_name='profile', on_delete=CASCADE)
+    user = OneToOne(relation=User, related_name='profile', on_delete=CASCADE)
 
 
 class Address(MongoModel):
     class Meta:
         collection_name = 'rel_o2o_address'
 
-    user = OneToOne(User, related_name='address', on_delete=SET_NULL)
+    user = OneToOne(relation=User, related_name='address', on_delete=SET_NULL)
     data = StringField()
 
 

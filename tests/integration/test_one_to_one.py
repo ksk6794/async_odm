@@ -7,7 +7,7 @@ from tests.base import BaseAsyncTestCase
 
 class UserTest(MongoModel):
     username = StringField()
-    profile = OneToOne('ProfileTest', related_name='user')
+    profile = OneToOne(relation='ProfileTest', related_name='user')
 
 
 class ProfileTest(MongoModel):

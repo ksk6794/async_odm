@@ -1,5 +1,5 @@
 from asyncio import iscoroutinefunction
-from typing import get_type_hints, AnyStr, Any, Sequence, Awaitable
+from typing import get_type_hints, AnyStr, Any, Awaitable
 
 from ..validators import FieldValidator
 
@@ -8,19 +8,17 @@ class BaseField:
     """
     Base class of any field.
     """
+    class Meta:
+        field_type = None
+
     _name = None
     _value = None
+    _is_subfield = False
 
-    field_type = None
-    is_sub_field = False
-
-    null: bool
-    blank: bool
-    min_length: int
-    max_length: int
-    unique: bool
-    choices: Sequence
-    on_delete: int
+    def __init__(self, **kwargs):
+        options = {arg: getattr(self, arg, None) for arg in get_type_hints(self)}
+        options.update(kwargs)
+        self.__dict__.update(options)
 
     def __setattr__(self, key, value):
         hints = get_type_hints(self)
@@ -28,7 +26,7 @@ class BaseField:
         if key in hints:
             required_type = hints.get(key)
 
-            if value is not None and not isinstance(value, required_type):
+            if required_type is not Any and value is not None and not isinstance(value, required_type):
                 raise TypeError(
                     f'Reserved attr `{key}` has wrong type! '
                     f'Expected `{required_type.__name__}`'
@@ -36,8 +34,16 @@ class BaseField:
 
         super().__setattr__(key, value)
 
+    @property
+    def is_subfield(self):
+        return self._is_subfield
+
+    @is_subfield.setter
+    def is_subfield(self, value):
+        self._is_subfield = value if isinstance(value, bool) else False
+
     def set_field_name(self, name: AnyStr):
-        self._name = name
+        self.Meta.field_name = name
 
     def get_field_name(self) -> AnyStr:
         return self._name
@@ -115,15 +121,9 @@ class BaseField:
 
 
 class BaseRelationField(BaseField):
-    backward_class = None
     _query = None
 
-    def __init__(self, relation: Any, related_name=None, default=None, null=True, on_delete=None):
-        self.relation = relation
-        self.related_name = related_name
-        self.default = default
-        self.null = null
-        self.on_delete = on_delete
+    backward_class = None
 
     def __aiter__(self):
         return self
@@ -146,11 +146,10 @@ class BaseRelationField(BaseField):
 class BaseBackwardRelationField(BaseField):
     _query = None
 
+    relation: Any = None
+
     def get_query(self):
         raise NotImplementedError
-
-    def __init__(self, relation):
-        self.relation = relation
 
     def __aiter__(self):
         return self
