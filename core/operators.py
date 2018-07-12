@@ -1,4 +1,4 @@
-from core.exceptions import QuerysetError
+from .exceptions import QuerysetError
 
 
 class Operator:

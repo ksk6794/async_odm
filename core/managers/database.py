@@ -1,6 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
-from core.exceptions import SettingsError
+from ..exceptions import SettingsError
 
 
 class DatabaseManager:

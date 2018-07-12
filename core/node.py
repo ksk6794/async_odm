@@ -1,8 +1,8 @@
 import copy
 
-from core.abstract.field import BaseRelationField
-from core.utils import update
-from core.operators import Operator
+from .abstract.field import BaseRelationField
+from .utils import update
+from .operators import Operator
 
 
 class QNodeVisitor(object):

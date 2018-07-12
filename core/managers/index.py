@@ -1,8 +1,8 @@
 from pymongo import ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE, HASHED, TEXT
 
-from core.exceptions import IndexCollectionError
-from core.logger import Logger
-from core.index import Index
+from ..exceptions import IndexCollectionError
+from ..logger import Logger
+from ..index import Index
 
 
 class IndexManager:

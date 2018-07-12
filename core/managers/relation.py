@@ -1,7 +1,7 @@
 from collections import namedtuple
 from inspect import isclass
 
-from core.abstract.field import BaseRelationField
+from ..abstract.field import BaseRelationField
 
 WaitedRelation = namedtuple('WaitedRelation', [
     'field_name',

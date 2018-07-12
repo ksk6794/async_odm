@@ -6,11 +6,10 @@ from typing import Dict, Tuple, AnyStr, Any, List
 from bson import DBRef, ObjectId
 
 from .abstract.model import BaseModel
-from .abstract.field import BaseField
+from .abstract.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 from .dispatchers import MongoDispatcher
 from .exceptions import ValidationError
-from core.abstract.field import BaseRelationField, BaseBackwardRelationField
 from .managers import OnDeleteManager
 from .queryset import QuerySet
 from .utils import classproperty
