@@ -1,4 +1,4 @@
-from core.base import MongoModel
+from core.model import MongoModel
 from core.fields import StringField, IntegerField, ListField, DictField
 
 

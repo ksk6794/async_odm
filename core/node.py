@@ -1,6 +1,6 @@
 import copy
 
-from core.fields import BaseRelationField
+from core.abstract.field import BaseRelationField
 from core.utils import update
 from core.operators import Operator
 

@@ -1,7 +1,7 @@
 from collections import namedtuple
+from inspect import isclass
 
-from core.fields import BaseRelationField
-
+from core.abstract.field import BaseRelationField
 
 WaitedRelation = namedtuple('WaitedRelation', [
     'field_name',
@@ -14,21 +14,14 @@ class RelationManager:
     """
     The singleton manager that organize the relations of models.
     """
-    _instance = None
-    _models = {}
-    _waited_relations = []
-
-    def __new__(cls):
-        if not cls._instance:
-            cls._instance = object.__new__(cls)
-        return cls._instance
+    def __init__(self):
+        self._models = {}
+        self._waited_relations = []
 
     def add_model(self, model):
         """
         Add the model to the list to implement the relations between another models.
         Model names can not be duplicated.
-        :param model: MongoModel instance
-        :return: void
         """
         name = '.'.join((model.__module__, model.__name__))
 
@@ -45,9 +38,6 @@ class RelationManager:
         return self._models
 
     def _process_relations(self, model):
-        # To avoid cyclic import
-        from core.base import BaseModel
-
         declared_fields = model.get_declared_fields()
 
         for field_name, field_instance in declared_fields.items():
@@ -55,19 +45,19 @@ class RelationManager:
                 relation = field_instance.relation
 
                 # Get a relationship model
-                if isinstance(relation, BaseModel):
-                    rel_model = relation
-
-                elif isinstance(relation, str):
+                if isinstance(relation, str):
                     if '.' not in relation:
                         relation = '.'.join((model.__module__, relation))
                         field_instance.relation = relation
 
                     rel_model = self.get_model(relation)
 
+                elif isclass(relation):
+                    rel_model = relation
+
                 else:
                     raise TypeError(
-                        'Wrong relation type!'
+                        'Wrong relation type! '
                         'You should specify the model class '
                         'or str with name of class model.'
                     )

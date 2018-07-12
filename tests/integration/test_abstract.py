@@ -1,6 +1,6 @@
 from core.fields import StringField
 from tests.base import BaseAsyncTestCase
-from core.base import MongoModel
+from core.model import MongoModel
 
 
 class BaseUser(MongoModel):

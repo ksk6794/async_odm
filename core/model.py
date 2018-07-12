@@ -1,171 +1,19 @@
-import os
-import re
-import copy
 import asyncio
-import importlib
-from types import ModuleType
-from typing import Any, AnyStr, List, Dict, Tuple
+import copy
+import re
+from typing import Dict, Tuple, AnyStr, Any, List
 
 from bson import DBRef, ObjectId
 
-from .exceptions import SettingsError, ValidationError
-from .managers import RelationManager, OnDeleteManager, DatabaseManager, IndexManager
+from .abstract.model import BaseModel
+from .abstract.field import BaseField
+from .constants import CREATE, UPDATE
+from .dispatchers import MongoDispatcher
+from .exceptions import ValidationError
+from core.abstract.field import BaseRelationField, BaseBackwardRelationField
+from .managers import OnDeleteManager
 from .queryset import QuerySet
 from .utils import classproperty
-from .dispatchers import MongoDispatcher
-from .constants import UPDATE, CREATE
-from .fields import Field, BaseRelationField, BaseBackwardRelationField
-
-
-class ModelManagement:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-
-class BaseModel(type):
-    """
-    Metaclass for all models.
-    """
-    _db_manager = None
-
-    def __init__(cls, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __new__(mcs, name, bases, attrs):
-        # If it is not MongoModel
-        if bases:
-            attrs['_management'] = ModelManagement(
-                declared_fields=mcs._get_declared_fields(bases, attrs),
-                dispatcher=mcs._get_dispatcher(name, attrs),
-                sorting=mcs._get_sorting(attrs),
-                has_backwards=False
-            )
-
-        model = super().__new__(mcs, name, bases, attrs)
-
-        if not mcs._is_abstract(attrs):
-            RelationManager().add_model(model)
-
-            if getattr(mcs.settings, 'AUTO_INSPECT', True) is True:
-                loop = asyncio.get_event_loop()
-                task = IndexManager().process(model)
-                loop.run_until_complete(task)
-
-        return model
-
-    @classproperty
-    def db_manager(mcs):
-        if not mcs._db_manager:
-            try:
-                mcs._db_manager = DatabaseManager(**mcs.settings.DATABASES)
-            except AttributeError:
-                raise SettingsError(
-                    'There is no database configuration! '
-                    'Please, define the \'DATABASES\' variable in the your settings module'
-                )
-
-        return mcs._db_manager
-
-    @classproperty
-    def settings(mcs) -> ModuleType:
-        env_var = 'ODM_SETTINGS_MODULE'
-        settings_module = os.environ.get(env_var)
-
-        if not settings_module:
-            raise SettingsError(f'Specify an \'{env_var}\' variable in the environment.')
-
-        try:
-            return importlib.import_module(settings_module)
-        except ImportError:
-            raise SettingsError('Can not import settings module, make sure the path is correct.')
-
-    @classmethod
-    def _is_abstract(mcs, attrs: Dict) -> bool:
-        return bool(getattr(attrs.get('Meta'), 'abstract', None))
-
-    @classmethod
-    def _get_model_module(mcs, name: AnyStr, attrs: Dict) -> AnyStr:
-        return '.'.join((attrs.get('__module__'), name))
-
-    @classmethod
-    def _get_db_alias(mcs, attrs):
-        return getattr(attrs.get('Meta'), 'db', 'default')
-
-    @classmethod
-    def _get_dispatcher(mcs, name: AnyStr, attrs: []) -> MongoDispatcher:
-        """
-        Get the dispatcher - the driver that organizes queries to the database.
-        """
-        dispatcher = None
-
-        if not mcs._is_abstract(attrs):
-            collection_name = mcs._get_collection_name(name, attrs)
-            alias = mcs._get_db_alias(attrs)
-            database = mcs._db_manager.get_database(alias)
-            dispatcher = MongoDispatcher(database, collection_name)
-
-        return dispatcher
-
-    @classmethod
-    def _get_collection_name(mcs, name: AnyStr, attrs: Dict) -> AnyStr:
-        """
-        Get the collection name or generate it by the model class name.
-        """
-        auto_name = '_'.join(re.findall(r'[A-Z][^A-Z]*', name[0].title() + name[1:])).lower()
-        collection_name = getattr(attrs.get('Meta'), 'collection_name', auto_name)
-
-        # Ensure that collection names do not match within the current database
-        alias = mcs._get_db_alias(attrs)
-        db_name = mcs.db_manager.get_db_name(alias)
-        models = RelationManager().get_models()
-
-        for model_name, model in models.items():
-            init_db_alias = mcs._get_db_alias(model.__dict__)
-            init_db_name = mcs.db_manager.get_db_name(init_db_alias)
-            init_collection_name = model.get_collection_name()
-
-            current = collection_name, db_name
-            initial = init_collection_name, init_db_name
-
-            if current == initial:
-                cur_model = mcs._get_model_module(name, attrs)
-                raise ValueError(
-                    f'The collection name `{collection_name}` already used by `{model_name}` model. '
-                    f'Please, specify a unique collection_name manually for {cur_model}.'
-                )
-
-        return collection_name
-
-    @classmethod
-    def _get_sorting(mcs, attrs: Dict) -> Tuple:
-        """
-        Get sorting attribute from the Meta.
-        """
-        return None if mcs._is_abstract(attrs) else getattr(attrs.get('Meta'), 'sorting', ())
-
-    @classmethod
-    def _get_declared_fields(mcs, bases: Tuple, attrs: Dict) -> Dict:
-        """
-        Get the collection fields, declared by the user when designing the model.
-        """
-        declared_fields = {}
-
-        for field_name, field_instance in attrs.copy().items():
-            if isinstance(field_instance, Field):
-                if '__' in field_name:
-                    raise AttributeError(
-                        f'You can not use `__` in the field name {field_name}'
-                    )
-
-                declared_fields[field_name] = field_instance
-                attrs.pop(field_name)
-
-        # Inherit the declared fields of an abstract model
-        for base in bases:
-            if base is not MongoModel:
-                declared_fields.update(base.get_declared_fields())
-
-        return declared_fields
 
 
 class MongoModel(metaclass=BaseModel):
@@ -327,7 +175,7 @@ class MongoModel(metaclass=BaseModel):
             field_instance = self.get_declared_fields().get(field_name)
 
             # Bring each field to an external value
-            if isinstance(field_instance, Field):
+            if isinstance(field_instance, BaseField):
                 field_value = field_instance.to_external_value(field_value)
 
                 # Update document with an external value
@@ -358,7 +206,7 @@ class MongoModel(metaclass=BaseModel):
                 document_id = getattr(field_value, '_id', field_value)
                 internal_value = DBRef(collection_name, document_id)
 
-            elif isinstance(field_instance, Field):
+            elif isinstance(field_instance, BaseField):
                 # Bring to the internal value
                 internal_value = field_instance.to_internal_value(field_value)
 
@@ -402,7 +250,7 @@ class MongoModel(metaclass=BaseModel):
         return self.get_external_values(document)
 
     @classmethod
-    async def _validate(cls, field_instance: Field, field_name: AnyStr, field_value: Any) -> Any:
+    async def _validate(cls, field_instance: BaseField, field_name: AnyStr, field_value: Any) -> Any:
         # Validate field value by default validators
         v = field_instance.validate
         is_coro = asyncio.iscoroutinefunction(v)

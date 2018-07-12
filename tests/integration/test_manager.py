@@ -1,4 +1,4 @@
-from core.base import MongoModel
+from core.model import MongoModel
 from core.exceptions import DoesNotExist
 from core.fields import StringField
 from tests.base import BaseAsyncTestCase

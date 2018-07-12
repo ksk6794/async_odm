@@ -1,4 +1,4 @@
-from core.base import MongoModel
+from core.model import MongoModel
 from core.fields import StringField, ForeignKey
 from tests.base import BaseAsyncTestCase
 from core.constants import CASCADE, SET_NULL, SET_DEFAULT

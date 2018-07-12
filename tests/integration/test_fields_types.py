@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from core.base import MongoModel
+from core.model import MongoModel
 from core.exceptions import ValidationError
 from tests.base import BaseAsyncTestCase
 from core.fields import StringField, IntegerField, ListField, DictField, FloatField, DateTimeField, BoolField

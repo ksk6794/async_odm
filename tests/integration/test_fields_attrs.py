@@ -3,7 +3,7 @@ from pymongo.errors import DuplicateKeyError
 from core.exceptions import ValidationError
 from core.fields import StringField, BoolField, IntegerField
 from tests.base import BaseAsyncTestCase
-from core.base import MongoModel
+from core.model import MongoModel
 
 
 class Settings(MongoModel):

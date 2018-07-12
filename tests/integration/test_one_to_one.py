@@ -1,6 +1,6 @@
 from pymongo.errors import DuplicateKeyError
 
-from core.base import MongoModel
+from core.model import MongoModel
 from core.fields import StringField, OneToOne
 from tests.base import BaseAsyncTestCase
 

@@ -1,6 +1,6 @@
 from uuid import uuid4
 from pymongo import DESCENDING, ASCENDING
-from core.base import MongoModel
+from core.model import MongoModel
 from core.fields import StringField, IntegerField, FloatField, ListField, DictField, DateTimeField, ForeignKey
 from core.index import Index
 

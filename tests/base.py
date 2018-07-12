@@ -4,7 +4,7 @@ import asyncio
 import unittest
 import inspect
 
-from core.base import MongoModel
+from core.model import MongoModel
 
 
 class AsyncMock(MagicMock):

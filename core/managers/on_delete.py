@@ -1,8 +1,9 @@
 import copy
 
-from core.constants import CASCADE, PROTECTED, SET_NULL, SET_DEFAULT
-from core.exceptions import ProtectedError
-from core.fields import BaseBackwardRelationField, OneToOneBackward, ForeignKeyBackward
+from ..constants import CASCADE, PROTECTED, SET_NULL, SET_DEFAULT
+from ..exceptions import ProtectedError
+from ..fields import OneToOneBackward, ForeignKeyBackward
+from core.abstract.field import BaseBackwardRelationField
 
 
 class OnDeleteManager:

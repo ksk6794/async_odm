@@ -4,15 +4,9 @@ from core.exceptions import SettingsError
 
 
 class DatabaseManager:
-    _instance = None
     _db_settings = {}
     _databases = {}
     _clients = {}
-
-    def __new__(cls, **kwargs):
-        if not cls._instance:
-            cls._instance = object.__new__(cls)
-        return cls._instance
 
     def __init__(self, **kwargs):
         for alias, db_settings in kwargs.items():
