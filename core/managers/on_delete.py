@@ -23,8 +23,8 @@ class OnDeleteManager:
     @staticmethod
     async def on_cascade(field_instance):
         if isinstance(field_instance, OneToOneBackward):
-            field_name = field_instance.get_field_name()
-            field_value = field_instance.get_field_value()
+            field_name = field_instance.field_name
+            field_value = field_instance.field_value
             filter_kwargs = {field_name: field_value}
             await field_instance.relation.objects.filter(**filter_kwargs).delete()
 
@@ -39,15 +39,15 @@ class OnDeleteManager:
     @staticmethod
     async def on_set_null(field_instance):
         if isinstance(field_instance, OneToOneBackward):
-            field_name = field_instance.get_field_name()
-            field_value = field_instance.get_field_value()
+            field_name = field_instance.field_name
+            field_value = field_instance.field_value
             model = field_instance.relation
             filter_kwargs = {field_name: field_value}
             update_data = {field_name: None}
             await model.objects.filter(**filter_kwargs).update(**update_data)
 
         elif isinstance(field_instance, ForeignKeyBackward):
-            field_name = field_instance.get_field_name()
+            field_name = field_instance.field_name
             await field_instance.get_query().update(**{field_name: None})
 
     @staticmethod
@@ -56,7 +56,7 @@ class OnDeleteManager:
             pass
 
         elif isinstance(field_instance, ForeignKeyBackward):
-            field_name = field_instance.get_field_name()
+            field_name = field_instance.field_name
             default = field_instance.relation.get_declared_fields().get(field_name).default
 
             if callable(default):
@@ -75,7 +75,7 @@ class OnDeleteManager:
                 # Find backward relationships
                 if isinstance(field_instance, BaseBackwardRelationField):
                     bwd_field_instance = getattr(odm_object, field_name)
-                    relation_field_name = bwd_field_instance.get_field_name()
+                    relation_field_name = bwd_field_instance.field_name
 
                     # Get declared fields from the model referenced by backward field
                     declared_fields = bwd_field_instance.relation.get_declared_fields()

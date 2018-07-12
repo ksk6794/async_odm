@@ -113,7 +113,7 @@ class MongoModel(metaclass=BaseModel):
                     field_value = field_value.id
 
                 if field_value:
-                    field_instance.set_field_value(field_value)
+                    field_instance.field_value = field_value
                     attr = field_instance
                 else:
                     attr = None

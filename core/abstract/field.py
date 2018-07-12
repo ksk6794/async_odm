@@ -1,5 +1,5 @@
 from asyncio import iscoroutinefunction
-from typing import get_type_hints, AnyStr, Any, Awaitable
+from typing import get_type_hints, AnyStr, Any, Awaitable, NoReturn
 
 from ..validators import FieldValidator
 
@@ -42,17 +42,21 @@ class BaseField:
     def is_subfield(self, value):
         self._is_subfield = value if isinstance(value, bool) else False
 
-    def set_field_name(self, name: AnyStr):
-        self.Meta.field_name = name
-
-    def get_field_name(self) -> AnyStr:
+    @property
+    def field_name(self) -> AnyStr:
         return self._name
 
-    def set_field_value(self, value: Any):
-        self._value = value
+    @field_name.setter
+    def field_name(self, value: Any) -> NoReturn:
+        self._name = value
 
-    def get_field_value(self) -> Any:
+    @property
+    def field_value(self) -> Any:
         return self._value
+
+    @field_value.setter
+    def field_value(self, value) -> NoReturn:
+        self._value = value
 
     def get_choice_key(self, value: Any) -> Any:
         choices = getattr(self, 'choices', None)
@@ -129,14 +133,14 @@ class BaseRelationField(BaseField):
         return self
 
     async def __anext__(self):
-        async for item in self._get_query():
+        async for item in self.get_query():
             return item
         raise StopAsyncIteration()
 
     def __await__(self):
-        return self._get_query().__await__()
+        return self.get_query().__await__()
 
-    def _get_query(self):
+    def get_query(self):
         raise NotImplementedError
 
     async def validate(self, name, value):

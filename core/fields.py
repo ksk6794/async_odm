@@ -137,7 +137,7 @@ class ForeignKey(BaseRelationField):
     null: bool = True
     on_delete: Optional[int]
 
-    def _get_query(self):
+    def get_query(self):
         if not self._query:
             self._query = self.relation.objects.get(**{
                 '_id': self._value
@@ -156,7 +156,7 @@ class OneToOne(BaseRelationField):
     on_delete: Optional[int]
     unique: bool = True
 
-    def _get_query(self):
+    def get_query(self):
         return self.relation.objects.get(**{
             '_id': self._value
         })
