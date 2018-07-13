@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Sequence, Optional
+from typing import Any, Sequence, Optional, Union, AnyStr
 
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE

@@ -35,6 +35,14 @@ class BaseField:
 
         super().__setattr__(key, value)
 
+    def __set_name__(self, owner, name):
+        if '__' in name:
+            raise AttributeError(
+                f'You can not use `__` in the field name {name}'
+            )
+
+        self._name = name
+
     @property
     def is_subfield(self):
         return self._is_subfield

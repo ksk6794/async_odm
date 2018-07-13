@@ -1,9 +1,8 @@
 import re
 import asyncio
-from typing import Dict, AnyStr, Tuple
+from typing import Dict, AnyStr, Tuple, List
 
 from ..resources import ResourcesManager
-from ..base.field import BaseField
 from ..dispatchers import MongoDispatcher
 from ..managers import IndexManager
 
@@ -26,7 +25,6 @@ class BaseModel(type):
         # If it is not MongoModel
         if bases:
             attrs['_management'] = ModelManagement(
-                declared_fields=mcs._get_declared_fields(bases, attrs),
                 dispatcher=mcs._get_dispatcher(name, attrs),
                 sorting=mcs._get_sorting(attrs),
                 has_backwards=False
@@ -107,29 +105,3 @@ class BaseModel(type):
         Get sorting attribute from the Meta.
         """
         return None if mcs._is_abstract(attrs) else getattr(attrs.get('Meta'), 'sorting', ())
-
-    @classmethod
-    def _get_declared_fields(mcs, bases: Tuple, attrs: Dict) -> Dict:
-        """
-        Get the collection fields, declared by the user when designing the model.
-        """
-        declared_fields = {}
-
-        for field_name, field_instance in attrs.copy().items():
-            if isinstance(field_instance, BaseField):
-                if '__' in field_name:
-                    raise AttributeError(
-                        f'You can not use `__` in the field name {field_name}'
-                    )
-
-                declared_fields[field_name] = field_instance
-                attrs.pop(field_name)
-
-        # Inherit the declared fields of an abstract model
-        for base in bases:
-            # Check whether the abstract model has declared fields.
-            # MongoModel is also an abstract model, but does not have any declared field
-            if base.get_declared_fields():
-                declared_fields.update(base.get_declared_fields())
-
-        return declared_fields

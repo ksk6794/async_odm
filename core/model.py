@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import inspect
 import re
 from typing import Dict, Tuple, AnyStr, Any, List
 
@@ -87,7 +88,7 @@ class MongoModel(metaclass=BaseModel):
 
     def __getattribute__(self, item):
         def __getattribute(obj, attribute):
-            return object.__getattribute__(obj, attribute)
+            return super().__getattribute__(obj, attribute)
 
         attr = super().__getattribute__(item)
         declared_fields = __getattribute(self, '_management').declared_fields
@@ -133,7 +134,14 @@ class MongoModel(metaclass=BaseModel):
 
     @classmethod
     def get_declared_fields(cls) -> Dict:
-        return cls._get_management_param('declared_fields')
+        declared_fields = {}
+
+        for c in inspect.getmro(cls):
+            for k, v in c.__dict__.items():
+                if isinstance(v, BaseField):
+                    declared_fields[k] = v
+
+        return declared_fields
 
     @classmethod
     def get_dispatcher(cls) -> MongoDispatcher:
