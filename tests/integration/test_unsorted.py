@@ -20,8 +20,8 @@ class IntegrationTests(BaseAsyncTestCase):
 
         self.assertTrue(isinstance(name._management.dispatcher, MongoDispatcher))
         self.assertEqual(name._management.dispatcher.collection_name, 'name_collection')
-        self.assertEqual(len(name._management.declared_fields), 1)
-        self.assertTrue(isinstance(name._management.declared_fields.get('name'), StringField))
+        self.assertEqual(len(name.get_declared_fields()), 1)
+        self.assertTrue(isinstance(name.get_declared_fields().get('name'), StringField))
 
         # TODO: В поле name, в _value попадает значение с других тестов.
         # TODO Это не критично и переписывается при сохранении, но все-же лучше поправить!

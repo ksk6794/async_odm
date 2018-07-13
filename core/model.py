@@ -95,6 +95,13 @@ class MongoModel(metaclass=BaseModel):
         declared_fields = cls.get_declared_fields()
 
         if item in declared_fields:
+            attrs = __getattribute(self, '__dict__')
+
+            # If the requested field is present in the model,
+            # but is not present in the model instance.
+            if item not in attrs:
+                raise AttributeError()
+
             field_instance = declared_fields.get(item)
             field_value = None
 
@@ -104,7 +111,7 @@ class MongoModel(metaclass=BaseModel):
 
                 # Set the value with relation object id for a field to provide base relation
                 if isinstance(field_instance, BaseRelationField):
-                    field_value = __getattribute(self, '__dict__').get(item)
+                    field_value = attrs.get(item)
 
                 # Set the _id of the current object as a value
                 # provide backward relationship for relation fields
