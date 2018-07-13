@@ -1,5 +1,5 @@
 from asyncio import iscoroutinefunction
-from typing import get_type_hints, AnyStr, Any, Awaitable, NoReturn
+from typing import get_type_hints, AnyStr, Any, Awaitable, NoReturn, Optional
 
 from ..validators import FieldValidator
 
@@ -130,6 +130,9 @@ class BaseRelationField(BaseField):
 
     backward_class = None
 
+    relation: Any
+    related_name: Optional[str]
+
     def __aiter__(self):
         return self
 
@@ -138,7 +141,7 @@ class BaseRelationField(BaseField):
             return item
         raise StopAsyncIteration()
 
-    def __await__(self):
+    def __await__(self) -> Awaitable:
         return self.get_query().__await__()
 
     def get_query(self):

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Sequence, Optional
 
-from .abstract.field import BaseField, BaseRelationField, BaseBackwardRelationField
+from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 
 __all__ = (

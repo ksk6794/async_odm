@@ -5,8 +5,8 @@ from typing import Dict, Tuple, AnyStr, Any, List
 
 from bson import DBRef, ObjectId
 
-from .abstract.model import BaseModel
-from .abstract.field import BaseField, BaseRelationField, BaseBackwardRelationField
+from .base.model import BaseModel
+from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 from .dispatchers import MongoDispatcher
 from .exceptions import ValidationError

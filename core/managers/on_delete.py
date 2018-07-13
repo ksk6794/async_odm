@@ -3,7 +3,7 @@ import copy
 from ..constants import CASCADE, PROTECTED, SET_NULL, SET_DEFAULT
 from ..exceptions import ProtectedError
 from ..fields import OneToOneBackward, ForeignKeyBackward
-from ..abstract.field import BaseBackwardRelationField
+from ..base.field import BaseBackwardRelationField
 
 
 class OnDeleteManager:

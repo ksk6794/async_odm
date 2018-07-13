@@ -1,12 +1,11 @@
 from collections import namedtuple
 from inspect import isclass
 
-from ..abstract.field import BaseRelationField
+from ..base.field import BaseRelationField
 
 WaitedRelation = namedtuple('WaitedRelation', [
     'field_name',
-    'field_instance',
-    'model_name'
+    'model'
 ])
 
 
@@ -18,7 +17,7 @@ class RelationManager:
         self._models = {}
         self._waited_relations = []
 
-    def add_model(self, model):
+    def register_model(self, model):
         """
         Add the model to the list to implement the relations between another models.
         Model names can not be duplicated.
@@ -64,19 +63,20 @@ class RelationManager:
 
                 # If the model is not yet registered
                 if rel_model:
-                    self._handle_relation(field_name, field_instance, rel_model, model)
+                    self._handle_relation(field_name, model, rel_model)
                 else:
                     # Add model to the waiting list
                     waited_relation = WaitedRelation(
                         field_name=field_name,
-                        field_instance=field_instance,
-                        model_name='.'.join([model.__module__, model.__name__])
+                        model=model
                     )
                     self._waited_relations.append(waited_relation)
 
     @staticmethod
-    def _handle_relation(field_name, field_instance, rel_model, model):
+    def _handle_relation(field_name, model, rel_model):
         # The model referred to by the current model
+        declared_fields = model.get_declared_fields()
+        field_instance = declared_fields.get(field_name)
         field_instance.relation = rel_model
 
         # If the parameter `related_name` is not specified - (collection name)_set
@@ -95,13 +95,12 @@ class RelationManager:
     def _handle_waited_relations(self):
         for waited_relation in self._waited_relations:
             field_name = waited_relation.field_name
-            field_instance = waited_relation.field_instance
-            model_name = waited_relation.model_name
-
-            model = self.get_model(model_name)
+            model = waited_relation.model
+            declared_fields = model.get_declared_fields()
+            field_instance = declared_fields.get(field_name)
             rel_model = self.get_model(field_instance.relation)
 
             if rel_model:
-                self._handle_relation(field_name, field_instance, rel_model, model)
+                self._handle_relation(field_name, model, rel_model)
                 index = self._waited_relations.index(waited_relation)
                 del self._waited_relations[index]

@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, AnyStr, Tuple
 
 from ..resources import ResourcesManager
-from ..abstract.field import BaseField
+from ..base.field import BaseField
 from ..dispatchers import MongoDispatcher
 from ..managers import IndexManager
 
@@ -35,7 +35,7 @@ class BaseModel(type):
         model = super().__new__(mcs, name, bases, attrs)
 
         if not mcs._is_abstract(attrs):
-            mcs._resources.relations.add_model(model)
+            mcs._resources.relations.register_model(model)
 
             if getattr(mcs._resources.settings, 'AUTO_INSPECT', True) is True:
                 loop = asyncio.get_event_loop()
