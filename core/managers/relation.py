@@ -81,11 +81,10 @@ class RelationManager:
 
         # Add a field to retrieve referring objects to the current object
         backward_relation = field_instance.backward_class(relation=model)
-        backward_relation._name = field_name
+        backward_relation.field_name = field_name
 
         # Add backward relation by related_name argument
-        declared_fields = rel_model.get_declared_fields()
-        declared_fields[related_name] = backward_relation
+        setattr(rel_model, related_name, backward_relation)
         rel_model.has_backwards = True
 
     def _process_waited_relation(self, name):

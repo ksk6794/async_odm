@@ -88,35 +88,38 @@ class MongoModel(metaclass=BaseModel):
 
     def __getattribute__(self, item):
         def __getattribute(obj, attribute):
-            return super().__getattribute__(obj, attribute)
+            return object.__getattribute__(obj, attribute)
 
-        attr = super().__getattribute__(item)
-        declared_fields = __getattribute(self, '_management').declared_fields
-        field_instance = declared_fields.get(item)
-        field_value = None
+        attr = __getattribute(self, item)
+        cls = __getattribute(self, '__class__')
+        declared_fields = cls.get_declared_fields()
 
-        if isinstance(field_instance, (BaseRelationField, BaseBackwardRelationField)):
-            # Prevent 'can not reuse awaitable coroutine' exception
-            field_instance = copy.deepcopy(field_instance)
+        if item in declared_fields:
+            field_instance = declared_fields.get(item)
+            field_value = None
 
-            # Set the value with relation object id for a field to provide base relation
-            if isinstance(field_instance, BaseRelationField):
-                field_value = __getattribute(self, '__dict__').get(item)
+            if isinstance(field_instance, (BaseRelationField, BaseBackwardRelationField)):
+                # Prevent 'can not reuse awaitable coroutine' exception
+                field_instance = copy.deepcopy(field_instance)
 
-            # Set the _id of the current object as a value
-            # provide backward relationship for relation fields
-            elif isinstance(field_instance, BaseBackwardRelationField):
-                field_value = __getattribute(self, '_id')
+                # Set the value with relation object id for a field to provide base relation
+                if isinstance(field_instance, BaseRelationField):
+                    field_value = __getattribute(self, '__dict__').get(item)
 
-            if field_value is not None:
-                if isinstance(field_value, DBRef):
-                    field_value = field_value.id
+                # Set the _id of the current object as a value
+                # provide backward relationship for relation fields
+                elif isinstance(field_instance, BaseBackwardRelationField):
+                    field_value = __getattribute(self, '_id')
 
-                if field_value:
-                    field_instance.field_value = field_value
-                    attr = field_instance
-                else:
-                    attr = None
+                if field_value is not None:
+                    if isinstance(field_value, DBRef):
+                        field_value = field_value.id
+
+                    if field_value:
+                        field_instance.field_value = field_value
+                        attr = field_instance
+                    else:
+                        attr = None
 
         return attr
 
