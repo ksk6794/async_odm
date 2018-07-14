@@ -49,7 +49,7 @@ class BaseField:
     def __set__(self, instance, value):
         field_name = self.field_name
         instance._modified_fields.append(field_name)
-        instance.document[field_name] = value
+        instance._document[field_name] = value
 
     def __set_name__(self, owner, name):
         if '__' in name:
