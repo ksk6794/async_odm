@@ -1,5 +1,8 @@
+import copy
 from asyncio import iscoroutinefunction
 from typing import get_type_hints, AnyStr, Any, Awaitable, NoReturn, Optional
+
+from bson import DBRef
 
 from ..validators import FieldValidator
 
@@ -35,17 +38,18 @@ class BaseField:
 
         super().__setattr__(key, value)
 
-    # def __get__(self, instance, owner):
-    #     field_name = self.field_name
-    #
-    #     if field_name not in instance.document:
-    #         raise AttributeError()
-    #
-    #     return instance.document[field_name]
-    #
-    # def __set__(self, instance, value):
-    #     field_name = self.field_name
-    #     instance.document[field_name] = value
+    def __get__(self, instance, owner):
+        field_name = self.field_name
+
+        if field_name not in instance._document:
+            raise AttributeError()
+
+        return instance._document[field_name]
+
+    def __set__(self, instance, value):
+        field_name = self.field_name
+        instance._modified_fields.append(field_name)
+        instance.document[field_name] = value
 
     def __set_name__(self, owner, name):
         if '__' in name:
@@ -153,14 +157,17 @@ class BaseRelationField(BaseField):
     relation: Any
     related_name: Optional[str]
 
-    # def __get__(self, instance, owner):
-    #     field_name = self.field_name
-    #
-    #     if field_name not in instance.document:
-    #         raise AttributeError()
-    #
-    #     declared_fields = instance.get_declared_fields()
-    #     return declared_fields.get(field_name)
+    def __get__(self, instance, owner):
+        field = copy.deepcopy(self)
+        field_value = instance._document.get(field.field_name)
+
+        if field_value is not None:
+            if isinstance(field_value, DBRef) and field_value.id:
+                field.field_value = field_value.id
+            else:
+                field = None
+
+        return field
 
     def __aiter__(self):
         return self
@@ -185,14 +192,16 @@ class BaseBackwardRelationField(BaseField):
 
     relation: Any = None
 
-    # def __get__(self, instance, owner):
-    #     field_name = self.field_name
-    #
-    #     if field_name not in instance.document:
-    #         raise AttributeError()
-    #
-    #     declared_fields = instance.get_declared_fields()
-    #     return declared_fields.get(field_name)
+    def __get__(self, instance, owner):
+        field = copy.deepcopy(self)
+        field_value = instance._document.get('_id')
+
+        if isinstance(self.field_value, DBRef):
+            field_value = self.field_value.id
+
+        field.field_value = field_value
+
+        return field
 
     def get_query(self):
         raise NotImplementedError

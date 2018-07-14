@@ -24,15 +24,7 @@ class MongoModel(metaclass=BaseModel):
 
     def __init__(self, **document):
         # Fields that were set in the model instance, but not declared.
-        self._undeclared_fields = {}
         self._modified_fields = []
-
-        # Save fields not declared in the model.
-        for field_name, field_value in document.items():
-            declared_fields = self.get_declared_fields()
-
-            if field_name not in declared_fields and field_name != '_id':
-                self._undeclared_fields[field_name] = field_value
 
         if '_id' in document:
             document = self.get_external_values(document)
@@ -41,19 +33,6 @@ class MongoModel(metaclass=BaseModel):
 
     def __repr__(self):
         return f'{self.__class__.__name__} _id: {self._document.get("_id")}'
-
-    def __setattr__(self, key, value):
-        # Ignore private properties
-        if not key.startswith('_'):
-            declared_fields = self.get_declared_fields()
-
-            if key in declared_fields:
-                self._document[key] = value
-                self._modified_fields.append(key)
-            else:
-                self._undeclared_fields[key] = value
-        else:
-            super().__setattr__(key, value)
 
     def __getattr__(self, item):
         if item in self._document:
@@ -91,50 +70,13 @@ class MongoModel(metaclass=BaseModel):
 
         return _func
 
-    def __getattribute__(self, item):
-        def __getattribute(obj, attribute):
-            return object.__getattribute__(obj, attribute)
-
-        attr = __getattribute(self, item)
-        cls = __getattribute(self, '__class__')
-        declared_fields = cls.get_declared_fields()
-
-        if item in declared_fields:
-            attrs = __getattribute(self, '_document')
-
-            # If the requested field is present in the model,
-            # but is not present in the model instance.
-            if item not in attrs:
-                raise AttributeError()
-
-            attr = attrs.get(item)
-            field_instance = declared_fields.get(item)
-            field_value = None
-
-            if isinstance(field_instance, (BaseRelationField, BaseBackwardRelationField)):
-                # Prevent 'can not reuse awaitable coroutine' exception
-                field_instance = copy.deepcopy(field_instance)
-
-                # Set the value with relation object id for a field to provide base relation
-                if isinstance(field_instance, BaseRelationField):
-                    field_value = attrs.get(item)
-
-                # Set the _id of the current object as a value
-                # provide backward relationship for relation fields
-                elif isinstance(field_instance, BaseBackwardRelationField):
-                    field_value = attrs.get('_id')
-
-                if field_value is not None:
-                    if isinstance(field_value, DBRef):
-                        field_value = field_value.id
-
-                    if field_value:
-                        field_instance.field_value = field_value
-                        attr = field_instance
-                    else:
-                        attr = None
-
-        return attr
+    @property
+    def _undeclared_fields(self):
+        declared_fields_names = set(self.get_declared_fields().keys())
+        document_fields = set(self._document.keys())
+        undeclared_names = list(document_fields - declared_fields_names)
+        undeclared_fields = {k: v for k, v in self._document.items() if k in undeclared_names and k != '_id'}
+        return undeclared_fields
 
     @classproperty
     def objects(cls) -> QuerySet:
