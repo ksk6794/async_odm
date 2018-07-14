@@ -20,7 +20,6 @@ class MongoModel(metaclass=BaseModel):
     class Meta:
         abstract = True
 
-    _id = None
     _management = None
 
     def __init__(self, **document):
@@ -38,22 +37,28 @@ class MongoModel(metaclass=BaseModel):
         if '_id' in document:
             document = self.get_external_values(document)
 
-        self.__dict__.update(document)
+        self._document = document
 
     def __repr__(self):
-        return f'{self.__class__.__name__} _id: {self.__dict__.get("_id")}'
+        return f'{self.__class__.__name__} _id: {self._document.get("_id")}'
 
     def __setattr__(self, key, value):
         # Ignore private properties
         if not key.startswith('_'):
             declared_fields = self.get_declared_fields()
 
-            if key not in declared_fields:
+            if key in declared_fields:
+                self._document[key] = value
+                self._modified_fields.append(key)
+            else:
                 self._undeclared_fields[key] = value
-            self._modified_fields.append(key)
-        super().__setattr__(key, value)
+        else:
+            super().__setattr__(key, value)
 
     def __getattr__(self, item):
+        if item in self._document:
+            return self._document.get(item)
+
         match = re.match('get_(?P<field_name>\w+)_display', item)
 
         if not match:
@@ -79,7 +84,7 @@ class MongoModel(metaclass=BaseModel):
 
         # Closure is used to make get_FOO_display callable
         def _func():
-            field_value = self.__dict__.get(field_name)
+            field_value = self._document.get(field_name)
             display = field_instance.get_choice_value(field_value)
 
             return display
@@ -95,13 +100,14 @@ class MongoModel(metaclass=BaseModel):
         declared_fields = cls.get_declared_fields()
 
         if item in declared_fields:
-            attrs = __getattribute(self, '__dict__')
+            attrs = __getattribute(self, '_document')
 
             # If the requested field is present in the model,
             # but is not present in the model instance.
             if item not in attrs:
                 raise AttributeError()
 
+            attr = attrs.get(item)
             field_instance = declared_fields.get(item)
             field_value = None
 
@@ -116,7 +122,7 @@ class MongoModel(metaclass=BaseModel):
                 # Set the _id of the current object as a value
                 # provide backward relationship for relation fields
                 elif isinstance(field_instance, BaseBackwardRelationField):
-                    field_value = __getattribute(self, '_id')
+                    field_value = attrs.get('_id')
 
                 if field_value is not None:
                     if isinstance(field_value, DBRef):
@@ -136,7 +142,7 @@ class MongoModel(metaclass=BaseModel):
 
     @property
     def id(self) -> ObjectId:
-        return self._id
+        return self._document.get('_id')
 
     @classproperty
     def has_backwards(cls) -> bool:
@@ -170,8 +176,8 @@ class MongoModel(metaclass=BaseModel):
         return getattr(cls._management, param, None)
 
     async def save(self):
-        document = await self._update() if self._id else await self._create()
-        self.__dict__.update(document)
+        document = await self._update() if self.id else await self._create()
+        self._document.update(document)
 
     async def delete(self):
         if self.has_backwards:
@@ -180,7 +186,7 @@ class MongoModel(metaclass=BaseModel):
         await self.objects.internal_query.delete_one(_id=self.id)
 
         # Remove document id from the ODM object
-        self._id = None
+        self._document['_id'] = None
 
     def get_external_values(self, document: Dict) -> Dict:
         """
@@ -220,7 +226,7 @@ class MongoModel(metaclass=BaseModel):
             if isinstance(field_instance, BaseRelationField):
                 # Set the DBRef for the field value (create) or leave the same (update)
                 collection_name = field_instance.relation.get_collection_name()
-                document_id = getattr(field_value, '_id', field_value)
+                document_id = getattr(field_value, 'id', field_value)
                 internal_value = DBRef(collection_name, document_id)
 
             elif isinstance(field_instance, BaseField):
@@ -242,7 +248,7 @@ class MongoModel(metaclass=BaseModel):
         """
         internal_values = await self.get_internal_values(
             action=CREATE,
-            field_values=self.__dict__,
+            field_values=self._document,
             modified=self._modified_fields,
             undeclared=self._undeclared_fields
         )
@@ -259,11 +265,11 @@ class MongoModel(metaclass=BaseModel):
         """
         internal_values = await self.get_internal_values(
             action=UPDATE,
-            field_values=self.__dict__,
+            field_values=self._document,
             modified=self._modified_fields,
             undeclared=self._undeclared_fields
         )
-        document = await self.objects.internal_query.update_one(self._id, **internal_values)
+        document = await self.objects.internal_query.update_one(self.id, **internal_values)
         return self.get_external_values(document)
 
     @classmethod

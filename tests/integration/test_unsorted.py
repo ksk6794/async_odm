@@ -32,7 +32,7 @@ class IntegrationTests(BaseAsyncTestCase):
         await name.save()
 
         name = await Name.objects.get(name='test')
-        self.assertTrue(name._id)
+        self.assertTrue(name.id)
         self.assertEqual(name.name, 'test')
 
         await name.delete()
@@ -77,7 +77,7 @@ class IntegrationTests(BaseAsyncTestCase):
         await name.save()
 
         name = await Name.objects.get(name='test')
-        self.assertTrue(name._id)
+        self.assertTrue(name.id)
         self.assertEqual(name.name, 'test')
 
         await name.delete()
@@ -200,8 +200,8 @@ class IntegrationTests(BaseAsyncTestCase):
         posts = await user.posts
 
         self.assertEqual(len(posts), 2)
-        self.assertEqual(posts[0]._id, post_1._id)
-        self.assertEqual(posts[1]._id, post_2._id)
+        self.assertEqual(posts[0].id, post_1.id)
+        self.assertEqual(posts[1].id, post_2.id)
 
         await post_1.delete()
         await post_2.delete()

@@ -35,6 +35,18 @@ class BaseField:
 
         super().__setattr__(key, value)
 
+    # def __get__(self, instance, owner):
+    #     field_name = self.field_name
+    #
+    #     if field_name not in instance.document:
+    #         raise AttributeError()
+    #
+    #     return instance.document[field_name]
+    #
+    # def __set__(self, instance, value):
+    #     field_name = self.field_name
+    #     instance.document[field_name] = value
+
     def __set_name__(self, owner, name):
         if '__' in name:
             raise AttributeError(
@@ -141,6 +153,15 @@ class BaseRelationField(BaseField):
     relation: Any
     related_name: Optional[str]
 
+    # def __get__(self, instance, owner):
+    #     field_name = self.field_name
+    #
+    #     if field_name not in instance.document:
+    #         raise AttributeError()
+    #
+    #     declared_fields = instance.get_declared_fields()
+    #     return declared_fields.get(field_name)
+
     def __aiter__(self):
         return self
 
@@ -163,6 +184,15 @@ class BaseBackwardRelationField(BaseField):
     _query = None
 
     relation: Any = None
+
+    # def __get__(self, instance, owner):
+    #     field_name = self.field_name
+    #
+    #     if field_name not in instance.document:
+    #         raise AttributeError()
+    #
+    #     declared_fields = instance.get_declared_fields()
+    #     return declared_fields.get(field_name)
 
     def get_query(self):
         raise NotImplementedError

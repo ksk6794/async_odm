@@ -24,7 +24,7 @@ class FilterConditionsTests(BaseAsyncTestCase):
         self.assertEqual(len(users), 2)
 
         for index, user in enumerate(users):
-            self.assertEqual(users_all[index]._id, user._id)
+            self.assertEqual(users_all[index].id, user.id)
 
     async def test_all_skip(self):
         users_all = await Profile.objects.all()
@@ -34,7 +34,7 @@ class FilterConditionsTests(BaseAsyncTestCase):
 
         for index, user in enumerate(users):
             index += 2
-            self.assertEqual(users_all[index]._id, user._id)
+            self.assertEqual(users_all[index].id, user.id)
 
     async def test_all_skip_limit(self):
         users_all = await Profile.objects.all()
@@ -44,11 +44,11 @@ class FilterConditionsTests(BaseAsyncTestCase):
 
         for index, user in enumerate(users):
             index += 2
-            self.assertEqual(users_all[index]._id, user._id)
+            self.assertEqual(users_all[index].id, user.id)
 
         users = await Profile.objects.all()[1:3]
         self.assertEqual(len(users), 3)
 
         for index, user in enumerate(users):
             index += 1
-            self.assertEqual(users_all[index]._id, user._id)
+            self.assertEqual(users_all[index].id, user.id)

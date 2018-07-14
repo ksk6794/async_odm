@@ -161,10 +161,10 @@ class QuerySet:
     async def bulk_create(self, *args):
         documents = []
 
-        for document in args:
-            internal_values = await document.get_internal_values(
+        for odm_object in args:
+            internal_values = await odm_object.get_internal_values(
                 action=CREATE,
-                field_values=document.__dict__,
+                field_values=odm_object._document,
                 modified=[],
                 undeclared={}
             )

@@ -45,7 +45,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         user = User(username='Bill')
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertEqual(user.username, 'Bill')
         await user.delete()
 
@@ -64,7 +64,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         user = User(age=30)
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertEqual(user.age, 30)
         await user.delete()
 
@@ -83,7 +83,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         user = User(billing=7.5)
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertEqual(user.billing, 7.5)
 
         await user.delete()
@@ -103,7 +103,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         user = User(addresses=[1, 2, 3])
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertEqual(user.addresses, [1, 2, 3])
         await user.delete()
 
@@ -122,7 +122,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         user = User(list_subfield=['abc'])
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertEqual(user.list_subfield, ['abc'])
         await user.delete()
 
@@ -141,7 +141,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         user = User(data={'key': 'value'})
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertEqual(user.data, {'key': 'value'})
         await user.delete()
 
@@ -160,7 +160,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         user = User(registered=datetime.now())
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertTrue(isinstance(user.registered, datetime))
         await user.delete()
 
@@ -201,7 +201,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
 
         await user.save()
 
-        self.assertTrue(user._id)
+        self.assertTrue(user.id)
         self.assertEqual(user.username, 'Bill')
         self.assertEqual(user.age, 30)
         self.assertEqual(user.billing, 5000.55)

@@ -17,7 +17,7 @@ class QueryManagerTests(BaseAsyncTestCase):
         await folder.save()
 
         name = await Folder.objects.get(name='test')
-        self.assertTrue(name._id)
+        self.assertTrue(name.id)
         self.assertEqual(name.name, 'test')
 
         await name.delete()
@@ -26,7 +26,7 @@ class QueryManagerTests(BaseAsyncTestCase):
         await Folder.objects.create(name='test')
 
         name = await Folder.objects.get(name='test')
-        self.assertTrue(name._id)
+        self.assertTrue(name.id)
         self.assertEqual(name.name, 'test')
 
         await name.delete()
@@ -96,7 +96,7 @@ class QueryManagerTests(BaseAsyncTestCase):
         await folder.save()
 
         folder = await Folder.objects.get(name='test')
-        self.assertTrue(folder._id)
+        self.assertTrue(folder.id)
         self.assertEqual(folder.name, 'test')
 
         await folder.delete()
