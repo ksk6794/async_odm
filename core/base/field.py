@@ -1,10 +1,12 @@
 import copy
 from asyncio import iscoroutinefunction
-from typing import get_type_hints, AnyStr, Any, Awaitable, NoReturn, Optional
+from collections import deque
+from typing import get_type_hints, AnyStr, Any, Awaitable, NoReturn, Optional, Union
 
 from bson import DBRef
 
-from ..validators import FieldValidator
+from ..exceptions import ValidationError
+from ..attributes import BaseAttr
 
 
 class BaseField:
@@ -19,10 +21,20 @@ class BaseField:
     _is_subfield = False
 
     def __init__(self, **kwargs):
+        self._attributes = {}
+
         # Get default values for field attributes
         options = {arg: getattr(self, arg, None) for arg in get_type_hints(self)}
         options.update(kwargs)
-        self.__dict__.update(options)
+
+        # Set filed attributes
+        deque(map(lambda i: setattr(self, *i), options.items()))
+
+    def set_field_attr(self, name, value):
+        self._attributes[name] = value
+
+    def get_field_attr(self, name):
+        return self._attributes.get(name)
 
     def __setattr__(self, key, value):
         hints = get_type_hints(self)
@@ -30,26 +42,32 @@ class BaseField:
         if key in hints:
             required_type = hints.get(key)
 
-            if required_type is not Any and value is not None and not isinstance(value, required_type):
+            if getattr(required_type, '__origin__', None) is Union:
+                required_type = tuple([t for t in required_type.__args__ if t not in (Any, None)])
+
+            if required_type is not Any and not isinstance(value, required_type):
                 raise TypeError(
                     f'Reserved attr `{key}` has wrong type! '
-                    f'Expected `{required_type.__name__}`'
+                    f'Expected `{required_type}`'
                 )
 
         super().__setattr__(key, value)
 
     def __get__(self, instance, owner):
         field_name = self.field_name
+        output = instance.get_field(field_name)
 
-        if field_name not in instance._document:
-            raise AttributeError()
+        if instance:
+            if not output:
+                raise AttributeError()
+        else:
+            declared_fields = owner.get_declared_fields()
+            output = declared_fields.get(field_name)
 
-        return instance._document[field_name]
+        return output
 
     def __set__(self, instance, value):
-        field_name = self.field_name
-        instance._modified_fields.append(field_name)
-        instance._document[field_name] = value
+        instance.set_field(self.field_name, value)
 
     def __set_name__(self, owner, name):
         if '__' in name:
@@ -129,9 +147,28 @@ class BaseField:
 
         return value
 
-    def validate(self, name: AnyStr, value: Any) -> Any:
-        FieldValidator(self, name, value).validate()
-        return value
+    def _check_value_type(self, field_name, field_value):
+        field_type = self.Meta.field_type
+
+        if field_name and field_value is not None:
+            if field_type and not isinstance(field_value, field_type):
+                raise ValidationError(
+                    f'Field `{field_name} has wrong type! Expected {field_type}`',
+                    self.is_subfield
+                )
+
+    def validate(self, field_name, field_value):
+        self._check_value_type(field_name, field_value)
+
+        # Get all field attributes
+        attributes = [k for k, v in self.__class__.__dict__.items() if isinstance(v, BaseAttr)]
+
+        # Validate each field attribute
+        for attr in attributes:
+            attr = getattr(self, attr)
+            attr.validate(field_value)
+
+        return field_value
 
     def to_internal_value(self, value: Any) -> Any:
         """
@@ -159,7 +196,7 @@ class BaseRelationField(BaseField):
 
     def __get__(self, instance, owner):
         field = copy.deepcopy(self)
-        field_value = instance._document.get(field.field_name)
+        field_value = instance.get_field(field.field_name)
 
         if field_value is not None:
             if isinstance(field_value, DBRef) and field_value.id:
@@ -183,8 +220,18 @@ class BaseRelationField(BaseField):
     def get_query(self):
         raise NotImplementedError
 
-    async def validate(self, name, value):
-        await FieldValidator(self, name, value).validate_rel()
+    async def validate(self, field_name, field_value):
+        super().validate(field_name, field_value)
+
+        document_id = getattr(field_value, '_id', field_value)
+
+        # For consistency check if exist related object in the database
+        if document_id is not None:
+            if not await self.relation.objects.filter(_id=document_id).count():
+                raise ValueError(
+                    f'Relation document with ObjectId(\'{str(document_id)}\') does not exist.\n'
+                    f'Model: \'{self.__class__.__name__}\', Field: \'{self.name}\''
+                )
 
 
 class BaseBackwardRelationField(BaseField):
@@ -194,7 +241,7 @@ class BaseBackwardRelationField(BaseField):
 
     def __get__(self, instance, owner):
         field = copy.deepcopy(self)
-        field_value = instance._document.get('_id')
+        field_value = instance.get_field('_id')
 
         if isinstance(self.field_value, DBRef):
             field_value = self.field_value.id

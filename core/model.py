@@ -1,13 +1,12 @@
 import asyncio
-import copy
 import inspect
 import re
-from typing import Dict, Tuple, AnyStr, Any, List
+from typing import Dict, Tuple, AnyStr, Any, List, Union
 
 from bson import DBRef, ObjectId
 
 from .base.model import BaseModel
-from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
+from .base.field import BaseField, BaseRelationField
 from .constants import CREATE, UPDATE
 from .dispatchers import MongoDispatcher
 from .exceptions import ValidationError
@@ -23,7 +22,6 @@ class MongoModel(metaclass=BaseModel):
     _management = None
 
     def __init__(self, **document):
-        # Fields that were set in the model instance, but not declared.
         self._modified_fields = []
 
         if '_id' in document:
@@ -70,8 +68,18 @@ class MongoModel(metaclass=BaseModel):
 
         return _func
 
+    def set_field(self, field_name, field_value):
+        self._document[field_name] = field_value
+        self._modified_fields.append(field_name)
+
+    def get_field(self, name):
+        return self._document.get(name)
+
     @property
     def _undeclared_fields(self):
+        """
+        Fields that were set in the model instance, but not declared.
+        """
         declared_fields_names = set(self.get_declared_fields().keys())
         document_fields = set(self._document.keys())
         undeclared_names = list(document_fields - declared_fields_names)
@@ -149,7 +157,7 @@ class MongoModel(metaclass=BaseModel):
         return document
 
     @classmethod
-    async def get_internal_values(cls, action: CREATE | UPDATE, field_values: Dict, modified: List, undeclared: Dict):
+    async def get_internal_values(cls, action: int, field_values: Dict, modified: List, undeclared: Dict):
         """
         Convert external values to internal for saving to a database.
         """

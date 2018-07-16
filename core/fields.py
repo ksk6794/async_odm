@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Sequence, Optional
 
+from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 
@@ -21,7 +22,7 @@ class BoolField(BaseField):
     class Meta:
         field_type = bool
 
-    null: bool = True
+    null = NullAttr(value=True)
     default: Any
     choices: Optional[Sequence]
 
@@ -30,13 +31,13 @@ class StringField(BaseField):
     class Meta:
         field_type = str
 
-    null: bool = True
-    blank: bool = True
-    min_length: Optional[int]
-    max_length: Optional[int]
+    null = NullAttr(value=True)
+    blank = BlankAttr(value=True)
+    min_length = MinLengthAttr(value=None)
+    max_length = MaxLengthAttr(value=None)
     unique: bool = False
-    index: Optional[Any]
-    default: Optional[Any]
+    index: Any
+    default: Any
     choices: Optional[Sequence]
 
 
@@ -44,9 +45,9 @@ class IntegerField(BaseField):
     class Meta:
         field_type = int
 
-    null: bool = True
+    null = NullAttr(value=True)
     unique: bool = False
-    default: Optional[Any]
+    default: Any
     choices: Optional[Sequence]
 
 
@@ -54,9 +55,9 @@ class FloatField(BaseField):
     class Meta:
         field_type = float
 
-    null: bool = True
+    null = NullAttr(value=True)
     unique: bool = False
-    default: Optional[Any]
+    default: Any
     choices: Optional[Sequence]
 
 
@@ -64,11 +65,11 @@ class ListField(BaseField):
     class Meta:
         field_type = list
 
-    child: Optional[Any]
-    null: bool = True
+    child: Any
+    null = NullAttr(value=True)
     length: Optional[int]
     unique: bool = False
-    default: Optional[Any]
+    default: Any
 
     # For IDE tips
     def __iter__(self):
@@ -90,10 +91,10 @@ class DictField(BaseField):
     class Meta:
         field_type = dict
 
-    null: bool = True
+    null = NullAttr(value=True)
     unique: bool = False
-    min_length: Optional[int]
-    max_length: Optional[int]
+    min_length = MinLengthAttr(value=None)
+    max_length = MaxLengthAttr(value=None)
     default: Any
 
     # For IDE tips
@@ -105,7 +106,7 @@ class DateTimeField(BaseField):
     class Meta:
         field_type = datetime
 
-    null: bool = True
+    null = NullAttr(value=True)
     auto_now_create: bool = False
     auto_now_update: bool = False
 
@@ -144,8 +145,8 @@ class ForeignKey(BaseRelationField):
 
     relation: Any
     related_name: Optional[str]
-    default: Optional[Any]
-    null: bool = True
+    default: Any
+    null = NullAttr(value=True)
     on_delete: Optional[int]
 
     def get_query(self):
@@ -162,8 +163,8 @@ class OneToOne(BaseRelationField):
 
     relation: Any
     related_name: Optional[str]
-    default: Optional[Any]
-    null: bool = True
+    default: Any
+    null = NullAttr(value=True)
     on_delete: Optional[int]
     unique: bool = True
 
