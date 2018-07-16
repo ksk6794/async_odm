@@ -20,6 +20,7 @@ class MongoModel(metaclass=BaseModel):
         abstract = True
 
     _management = None
+    # _document = {}
 
     def __init__(self, **document):
         self._modified_fields = []
