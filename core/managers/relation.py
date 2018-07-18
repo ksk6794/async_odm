@@ -28,8 +28,24 @@ class RelationManager:
     def get_model(self, model_name):
         return self._registered.get(model_name)
 
-    def get_models(self):
-        return self._registered
+    def get_registered(self):
+        """
+        Returns dict like:
+        {
+            'default': {
+                'path.to.module.Model': Model
+            }
+        }
+        """
+        registered = {}
+
+        for model in self._registered.values():
+            dispatcher = model.get_dispatcher()
+            db_name = dispatcher.database.name
+            collection_name = dispatcher.collection_name
+            registered.setdefault(db_name, {}).update({collection_name: model})
+
+        return registered
 
     def _process_relations(self, model):
         declared_fields = model.get_declared_fields()
@@ -57,6 +73,7 @@ class RelationManager:
                     )
 
                 if rel_model:
+                    # TODO: Forbid relations to abstract models
                     self._process_relation(field_name, model, rel_model)
                 else:
                     if not self._waited.get(relation):

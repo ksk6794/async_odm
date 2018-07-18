@@ -2,7 +2,6 @@ import asyncio
 import inspect
 import re
 from collections import deque
-from functools import partial
 from typing import Dict, Tuple, AnyStr, Any, List
 
 from bson import DBRef, ObjectId
@@ -22,7 +21,6 @@ class MongoModel(metaclass=BaseModel):
         abstract = True
 
     _dispatcher = None
-    __document = {}
 
     def __init__(self, **document):
         self.__document = {}
