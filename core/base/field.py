@@ -55,9 +55,10 @@ class BaseField:
 
     def __get__(self, instance, owner):
         field_name = self.field_name
-        output = instance.get_field(field_name)
 
         if instance:
+            output = instance.get_field(field_name)
+
             if not output:
                 raise AttributeError()
         else:
@@ -72,7 +73,7 @@ class BaseField:
     def __set_name__(self, owner, name):
         if '__' in name:
             raise AttributeError(
-                f'You can not use `__` in the field name {name}'
+                f'You can not use \'__\' in the field name {name}'
             )
 
         self._name = name
@@ -153,7 +154,8 @@ class BaseField:
         if field_name and field_value is not None:
             if field_type and not isinstance(field_value, field_type):
                 raise ValidationError(
-                    f'Field `{field_name} has wrong type! Expected {field_type}`',
+                    f'Field \'{field_name}\' has wrong type! '
+                    f'Expected {field_type}`',
                     self.is_subfield
                 )
 

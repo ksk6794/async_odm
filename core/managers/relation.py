@@ -85,7 +85,6 @@ class RelationManager:
 
         # Add backward relation by related_name argument
         setattr(rel_model, related_name, backward_relation)
-        rel_model.has_backwards = True
 
     def _process_waited_relation(self, name):
         waited_models = self._waited.get(name)

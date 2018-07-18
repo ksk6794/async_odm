@@ -1,12 +1,14 @@
 import asyncio
 import inspect
 import re
-from typing import Dict, Tuple, AnyStr, Any, List, Union
+from collections import deque
+from functools import partial
+from typing import Dict, Tuple, AnyStr, Any, List
 
 from bson import DBRef, ObjectId
 
 from .base.model import BaseModel
-from .base.field import BaseField, BaseRelationField
+from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 from .dispatchers import MongoDispatcher
 from .exceptions import ValidationError
@@ -19,23 +21,35 @@ class MongoModel(metaclass=BaseModel):
     class Meta:
         abstract = True
 
-    _management = None
-    _document = {}
+    _dispatcher = None
+    __document = {}
 
     def __init__(self, **document):
-        self._modified_fields = []
+        self.__document = {}
+        self.__modified_fields = []
 
         if '_id' in document:
             document = self.get_external_values(document)
 
-        self._document = document
+        deque(map(lambda i: setattr(self, *i), document.items()))
+
+    def __setattr__(self, key, value):
+        if not key.startswith(f'_{MongoModel.__name__}__'):
+            declared_fields = self.get_declared_fields()
+
+            if key not in declared_fields:
+                self.__document[key] = value
+            else:
+                super().__setattr__(key, value)
+        else:
+            super().__setattr__(key, value)
 
     def __repr__(self):
-        return f'{self.__class__.__name__} _id: {self._document.get("_id")}'
+        return f'{self.__class__.__name__} _id: {self.__document.get("_id")}'
 
     def __getattr__(self, item):
-        if item in self._document:
-            return self._document.get(item)
+        if item in self.__document:
+            return self.__document.get(item)
 
         match = re.match('get_(?P<field_name>\w+)_display', item)
 
@@ -62,19 +76,22 @@ class MongoModel(metaclass=BaseModel):
 
         # Closure is used to make get_FOO_display callable
         def _func():
-            field_value = self._document.get(field_name)
+            field_value = self.__document.get(field_name)
             display = field_instance.get_choice_value(field_value)
 
             return display
 
         return _func
 
+    def get_document(self):
+        return self.__document
+
     def set_field(self, field_name, field_value):
-        self._document[field_name] = field_value
-        self._modified_fields.append(field_name)
+        self.__document[field_name] = field_value
+        self.__modified_fields.append(field_name)
 
     def get_field(self, name):
-        return self._document.get(name)
+        return self.__document.get(name)
 
     @property
     def _undeclared_fields(self):
@@ -82,9 +99,9 @@ class MongoModel(metaclass=BaseModel):
         Fields that were set in the model instance, but not declared.
         """
         declared_fields_names = set(self.get_declared_fields().keys())
-        document_fields = set(self._document.keys())
+        document_fields = set(self.__document.keys())
         undeclared_names = list(document_fields - declared_fields_names)
-        undeclared_fields = {k: v for k, v in self._document.items() if k in undeclared_names and k != '_id'}
+        undeclared_fields = {k: v for k, v in self.__document.items() if k in undeclared_names and k != '_id'}
         return undeclared_fields
 
     @classproperty
@@ -93,11 +110,12 @@ class MongoModel(metaclass=BaseModel):
 
     @property
     def id(self) -> ObjectId:
-        return self._document.get('_id')
+        return self.__document.get('_id')
 
     @classproperty
     def has_backwards(cls) -> bool:
-        return cls._get_management_param('has_backwards')
+        field_instances = cls.get_declared_fields().values()
+        return any([isinstance(f, BaseBackwardRelationField) for f in field_instances])
 
     @classmethod
     def get_declared_fields(cls) -> Dict:
@@ -112,23 +130,19 @@ class MongoModel(metaclass=BaseModel):
 
     @classmethod
     def get_dispatcher(cls) -> MongoDispatcher:
-        return cls._get_management_param('dispatcher')
+        return cls._dispatcher
 
     @classmethod
     def get_sorting(cls) -> Tuple:
-        return cls._get_management_param('sorting')
+        return getattr(cls.Meta, 'sorting', None)
 
     @classmethod
     def get_collection_name(cls) -> AnyStr:
         return cls.get_dispatcher().collection_name
 
-    @classmethod
-    def _get_management_param(cls, param: AnyStr) -> Any:
-        return getattr(cls._management, param, None)
-
     async def save(self):
         document = await self._update() if self.id else await self._create()
-        self._document.update(document)
+        self.__document.update(document)
 
     async def delete(self):
         if self.has_backwards:
@@ -137,7 +151,7 @@ class MongoModel(metaclass=BaseModel):
         await self.objects.internal_query.delete_one(_id=self.id)
 
         # Remove document id from the ODM object
-        self._document['_id'] = None
+        self.__document['_id'] = None
 
     def get_external_values(self, document: Dict) -> Dict:
         """
@@ -199,8 +213,8 @@ class MongoModel(metaclass=BaseModel):
         """
         internal_values = await self.get_internal_values(
             action=CREATE,
-            field_values=self._document,
-            modified=self._modified_fields,
+            field_values=self.__document,
+            modified=self.__modified_fields,
             undeclared=self._undeclared_fields
         )
         insert_result = await self.objects.internal_query.create_one(**internal_values)
@@ -216,8 +230,8 @@ class MongoModel(metaclass=BaseModel):
         """
         internal_values = await self.get_internal_values(
             action=UPDATE,
-            field_values=self._document,
-            modified=self._modified_fields,
+            field_values=self.__document,
+            modified=self.__modified_fields,
             undeclared=self._undeclared_fields
         )
         document = await self.objects.internal_query.update_one(self.id, **internal_values)

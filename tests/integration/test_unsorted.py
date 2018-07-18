@@ -13,13 +13,13 @@ class IntegrationTests(BaseAsyncTestCase):
     async def test_auto_model_name(self):
         user = Author()
 
-        self.assertEqual(user._management.dispatcher.collection_name, 'author')
+        self.assertEqual(user.get_dispatcher().collection_name, 'author')
 
     async def test_model_instance(self):
         name = Name(name='Bob')
 
-        self.assertTrue(isinstance(name._management.dispatcher, MongoDispatcher))
-        self.assertEqual(name._management.dispatcher.collection_name, 'name_collection')
+        self.assertTrue(isinstance(name.get_dispatcher(), MongoDispatcher))
+        self.assertEqual(name.get_dispatcher().collection_name, 'name_collection')
         self.assertEqual(len(name.get_declared_fields()), 1)
         self.assertTrue(isinstance(name.get_declared_fields().get('name'), StringField))
 

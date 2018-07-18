@@ -61,25 +61,25 @@ class QuerySet:
 
         super().__setattr__(key, value)
 
-    def all(self) -> 'QuerySet':
+    def all(self):
         self._all = True
         return self
 
-    async def get(self, **kwargs) -> 'MongoModel':
+    async def get(self, **kwargs):
         get_kwargs = self._to_query(**kwargs)
         result = await self.model.get_dispatcher().get(self._projection, **get_kwargs)
         odm_object = self._to_object(result)
         return odm_object
 
-    def filter(self, *args, **kwargs) -> 'QuerySet':
+    def filter(self, *args, **kwargs):
         self._filter = update(self._filter, self._to_query(*args, **kwargs))
         return self
 
-    def exclude(self, *args, **kwargs) -> 'QuerySet':
+    def exclude(self, *args, **kwargs):
         self._filter = update(self._filter, self._to_query(*args, invert=True, **kwargs))
         return self
 
-    def sort(self, *args) -> 'QuerySet':
+    def sort(self, *args):
         # If sorting is not specified in queryset - take it from meta.
         args = args if args else self.model.get_sorting()
 
@@ -91,7 +91,7 @@ class QuerySet:
 
         return self
 
-    def raw_query(self, raw_query) -> 'QuerySet':
+    def raw_query(self, raw_query):
         if isinstance(raw_query, dict):
             update(self._filter, raw_query)
 
@@ -116,7 +116,7 @@ class QuerySet:
         result = await self.model.get_dispatcher().count(**self._filter)
         return result
 
-    async def create(self, **kwargs) -> 'MongoModel':
+    async def create(self, **kwargs):
         document = self.model(**kwargs)
         await document.save()
         return document
@@ -135,7 +135,7 @@ class QuerySet:
         )
         await self.model.get_dispatcher().update_many(self._filter, **internal_values)
 
-    def fields(self, **kwargs) -> 'QuerySet':
+    def fields(self, **kwargs):
         available_operators = ('slice',)
 
         for key, value in kwargs.items():
@@ -150,11 +150,11 @@ class QuerySet:
 
         return self
 
-    def defer(self, *args) -> 'QuerySet':
+    def defer(self, *args):
         self.fields(**{field_name: False for field_name in args})
         return self
 
-    def only(self, *args) -> 'QuerySet':
+    def only(self, *args):
         self.fields(**{field_name: True for field_name in args})
         return self
 
@@ -164,7 +164,7 @@ class QuerySet:
         for odm_object in args:
             internal_values = await odm_object.get_internal_values(
                 action=CREATE,
-                field_values=odm_object._document,
+                field_values=odm_object.get_document(),
                 modified=[],
                 undeclared={}
             )
@@ -227,7 +227,7 @@ class QuerySet:
 
         return raw_query
 
-    def _to_object(self, document: Dict) -> 'MongoModel':
+    def _to_object(self, document: Dict):
         return self.model(**document)
 
     def __getitem__(self, item):
@@ -266,10 +266,10 @@ class QuerySet:
         self._cursor = None
         return res
 
-    def __aiter__(self) -> 'QuerySet':
+    def __aiter__(self):
         return self
 
-    async def __anext__(self) -> 'MongoModel':
+    async def __anext__(self):
         async for document in await self.cursor:
             return self._to_object(document)
         raise StopAsyncIteration()

@@ -7,11 +7,6 @@ from ..dispatchers import MongoDispatcher
 from ..managers import IndexManager
 
 
-class ModelManagement:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-
 class BaseModel(type):
     """
     Metaclass for all models.
@@ -24,11 +19,7 @@ class BaseModel(type):
     def __new__(mcs, name, bases, attrs):
         # If it is not MongoModel
         if bases:
-            attrs['_management'] = ModelManagement(
-                dispatcher=mcs._get_dispatcher(name, attrs),
-                sorting=mcs._get_sorting(attrs),
-                has_backwards=False
-            )
+            attrs['_dispatcher'] = mcs._get_dispatcher(name, attrs)
 
         model = super().__new__(mcs, name, bases, attrs)
 
@@ -98,10 +89,3 @@ class BaseModel(type):
                 )
 
         return collection_name
-
-    @classmethod
-    def _get_sorting(mcs, attrs: Dict) -> Tuple:
-        """
-        Get sorting attribute from the Meta.
-        """
-        return None if mcs._is_abstract(attrs) else getattr(attrs.get('Meta'), 'sorting', ())
