@@ -169,7 +169,7 @@ class QuerySet:
                 undeclared={}
             )
 
-            # Wrap each document with InsertOne
+            # Wrap each document in InsertOne
             document = InsertOne(internal_values)
             documents.append(document)
 

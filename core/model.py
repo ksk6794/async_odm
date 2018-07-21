@@ -91,17 +91,6 @@ class MongoModel(metaclass=BaseModel):
     def get_field(self, name):
         return self.__document.get(name)
 
-    @property
-    def _undeclared_fields(self):
-        """
-        Fields that were set in the model instance, but not declared.
-        """
-        declared_fields_names = set(self.get_declared_fields().keys())
-        document_fields = set(self.__document.keys())
-        undeclared_names = list(document_fields - declared_fields_names)
-        undeclared_fields = {k: v for k, v in self.__document.items() if k in undeclared_names and k != '_id'}
-        return undeclared_fields
-
     @classproperty
     def objects(cls) -> QuerySet:
         return QuerySet(model=cls)
@@ -125,6 +114,16 @@ class MongoModel(metaclass=BaseModel):
                     declared_fields[k] = v
 
         return declared_fields
+
+    def get_undeclared_fields(self):
+        """
+        Fields that were set in the model instance, but not declared.
+        """
+        declared_fields_names = set(self.get_declared_fields().keys())
+        document_fields = set(self.__document.keys())
+        undeclared_names = list(document_fields - declared_fields_names)
+        undeclared_fields = {k: v for k, v in self.__document.items() if k in undeclared_names and k != '_id'}
+        return undeclared_fields
 
     @classmethod
     def get_dispatcher(cls) -> MongoDispatcher:
@@ -154,8 +153,6 @@ class MongoModel(metaclass=BaseModel):
     def get_external_values(self, document: Dict) -> Dict:
         """
         Convert internal values to external for representation to user.
-        :param document: dict
-        :return: dict
         """
         for field_name, field_value in document.copy().items():
             field_instance = self.get_declared_fields().get(field_name)
@@ -183,23 +180,9 @@ class MongoModel(metaclass=BaseModel):
 
             value = await field_instance.process_value(field_values.get(field_name), action)
             field_value = await cls._validate(field_instance, field_name, value)
-
-            internal_value = None
-
-            if isinstance(field_instance, BaseRelationField):
-                # Set the DBRef for the field value (create) or leave the same (update)
-                collection_name = field_instance.relation.get_collection_name()
-                document_id = getattr(field_value, 'id', field_value)
-                internal_value = DBRef(collection_name, document_id)
-
-            elif isinstance(field_instance, BaseField):
-                # Bring to the internal value
-                internal_value = field_instance.to_internal_value(field_value)
-
-            internal_values[field_name] = internal_value
+            internal_values[field_name] = field_instance.to_internal_value(field_value)
 
         # Undeclared fields are not validated
-        undeclared = undeclared
         internal_values.update(undeclared)
 
         return internal_values
@@ -213,7 +196,7 @@ class MongoModel(metaclass=BaseModel):
             action=CREATE,
             field_values=self.__document,
             modified=self.__modified_fields,
-            undeclared=self._undeclared_fields
+            undeclared=self.get_undeclared_fields()
         )
         insert_result = await self.objects.internal_query.create_one(**internal_values)
 
@@ -230,7 +213,7 @@ class MongoModel(metaclass=BaseModel):
             action=UPDATE,
             field_values=self.__document,
             modified=self.__modified_fields,
-            undeclared=self._undeclared_fields
+            undeclared=self.get_undeclared_fields()
         )
         document = await self.objects.internal_query.update_one(self.id, **internal_values)
         return self.get_external_values(document)

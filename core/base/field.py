@@ -235,6 +235,13 @@ class BaseRelationField(BaseField):
                     f'Model: \'{self.__class__.__name__}\', Field: \'{self.name}\''
                 )
 
+    def to_internal_value(self, value: Any):
+        collection_name = self.relation.get_collection_name()
+        document_id = getattr(value, 'id', value)
+        internal_value = DBRef(collection_name, document_id)
+
+        return internal_value
+
 
 class BaseBackwardRelationField(BaseField):
     _query = None
