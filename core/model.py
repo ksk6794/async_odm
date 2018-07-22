@@ -2,12 +2,12 @@ import asyncio
 import inspect
 import re
 from collections import deque
-from typing import Dict, Tuple, AnyStr, Any, List
+from typing import Dict, Tuple, AnyStr, Any
 
-from bson import DBRef, ObjectId
+from bson import ObjectId
 
 from .base.model import BaseModel
-from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
+from .base.field import BaseField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 from .dispatchers import MongoDispatcher
 from .exceptions import ValidationError
@@ -115,16 +115,6 @@ class MongoModel(metaclass=BaseModel):
 
         return declared_fields
 
-    def get_undeclared_fields(self):
-        """
-        Fields that were set in the model instance, but not declared.
-        """
-        declared_fields_names = set(self.get_declared_fields().keys())
-        document_fields = set(self.__document.keys())
-        undeclared_names = list(document_fields - declared_fields_names)
-        undeclared_fields = {k: v for k, v in self.__document.items() if k in undeclared_names and k != '_id'}
-        return undeclared_fields
-
     @classmethod
     def get_dispatcher(cls) -> MongoDispatcher:
         return cls._dispatcher
@@ -166,24 +156,37 @@ class MongoModel(metaclass=BaseModel):
 
         return document
 
-    @classmethod
-    async def get_internal_values(cls, action: int, field_values: Dict, modified: List, undeclared: Dict):
+    async def get_internal_values(self, action: int):
         """
         Convert external values to internal for saving to a database.
         """
-        internal_values = {}
+        document = self.get_document()
+        return await self.to_internal(document, action)
 
-        for field_name, field_instance in cls.get_declared_fields().items():
-            # Bring to internal values only modified fields (for update action)
+    @classmethod
+    async def to_internal(cls, field_values, action):
+        internal_values = {}
+        declared_fields = cls.get_declared_fields()
+        declared = set(declared_fields)
+        to_update = set(field_values)
+        modified = declared & to_update
+
+        for field_name, field_instance in declared_fields.items():
+            # Bring to internal values only modified fields (only for UPDATE)
             if action is UPDATE and field_name not in modified:
                 continue
 
+            # Process the datetime fields
             value = await field_instance.process_value(field_values.get(field_name), action)
-            field_value = await cls._validate(field_instance, field_name, value)
+
+            # Validate fields
+            field_value = await cls._validate(field_name, value)
+
             internal_values[field_name] = field_instance.to_internal_value(field_value)
 
-        # Undeclared fields are not validated
-        internal_values.update(undeclared)
+        undeclared = to_update - declared
+        undeclared_field_values = {k: v for k, v in field_values.items() if k in undeclared}
+        internal_values.update(undeclared_field_values)
 
         return internal_values
 
@@ -192,12 +195,7 @@ class MongoModel(metaclass=BaseModel):
         Create document with all defined fields.
         :return: dict
         """
-        internal_values = await self.get_internal_values(
-            action=CREATE,
-            field_values=self.__document,
-            modified=self.__modified_fields,
-            undeclared=self.get_undeclared_fields()
-        )
+        internal_values = await self.get_internal_values(CREATE)
         insert_result = await self.objects.internal_query.create_one(**internal_values)
 
         # Generate document from field_values and inserted_id
@@ -209,17 +207,15 @@ class MongoModel(metaclass=BaseModel):
         Update only modified document fields.
         :return: dict
         """
-        internal_values = await self.get_internal_values(
-            action=UPDATE,
-            field_values=self.__document,
-            modified=self.__modified_fields,
-            undeclared=self.get_undeclared_fields()
-        )
-        document = await self.objects.internal_query.update_one(self.id, **internal_values)
+        internal_values = await self.get_internal_values(UPDATE)
+        document_id = internal_values.pop('_id')
+        document = await self.objects.internal_query.update_one(document_id, **internal_values)
         return self.get_external_values(document)
 
     @classmethod
-    async def _validate(cls, field_instance: BaseField, field_name: AnyStr, field_value: Any) -> Any:
+    async def _validate(cls, field_name: AnyStr, field_value: Any) -> Any:
+        field_instance = cls.get_declared_fields().get(field_name)
+
         # Validate field value by default validators
         v = field_instance.validate
         is_coro = asyncio.iscoroutinefunction(v)
