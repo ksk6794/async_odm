@@ -105,6 +105,14 @@ class UniqueAttr(BaseAttr):
         pass
 
 
+class IndexAttr(BaseAttr):
+    _default: Any
+    name = 'index'
+
+    def validate(self, field_value):
+        pass
+
+
 class DefaultAttr(BaseAttr):
     _default: Any
     name = 'default'

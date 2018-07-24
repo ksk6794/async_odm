@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Sequence, Optional
 
-from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr, DefaultAttr
+from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr, DefaultAttr, IndexAttr
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 
@@ -36,7 +36,7 @@ class StringField(BaseField):
     min_length = MinLengthAttr()
     max_length = MaxLengthAttr()
     unique = UniqueAttr(value=False)
-    index: Any
+    index = IndexAttr(value=False)
     default = DefaultAttr()
     choices: Optional[Sequence]
 

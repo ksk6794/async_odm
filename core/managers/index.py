@@ -87,9 +87,8 @@ class IndexManager:
 
         # Find and convert indexes from field attributes to Index instance
         for field_name, field_instance in model.get_declared_fields().items():
-            attr_instance = getattr(field_instance, 'unique', None)
-            unique = getattr(attr_instance, 'value', False)
-            index = getattr(field_instance, 'index', None)
+            unique = field_instance.unique.value if hasattr(field_instance, 'unique') else False
+            index = field_instance.index.value if hasattr(field_instance, 'index') else False
 
             if unique or index:
                 index = ASCENDING if unique and not index else index
