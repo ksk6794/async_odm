@@ -33,8 +33,8 @@ class StringField(BaseField):
 
     null = NullAttr(value=True)
     blank = BlankAttr(value=True)
-    min_length = MinLengthAttr(value=None)
-    max_length = MaxLengthAttr(value=None)
+    min_length = MinLengthAttr()
+    max_length = MaxLengthAttr()
     unique = UniqueAttr(value=False)
     index: Any
     default: Any
@@ -93,8 +93,8 @@ class DictField(BaseField):
 
     null = NullAttr(value=True)
     unique = UniqueAttr(value=False)
-    min_length = MinLengthAttr(value=None)
-    max_length = MaxLengthAttr(value=None)
+    min_length = MinLengthAttr()
+    max_length = MaxLengthAttr()
     default: Any
 
     # For IDE tips
