@@ -48,7 +48,7 @@ class QuerySet:
         self.internal_query = InternalQuery(dispatcher)
 
     def __setattr__(self, key, value):
-        hints = get_type_hints(self)
+        hints = get_type_hints(self.__class__)
 
         if key in hints:
             expected_type = hints.get(key)
@@ -233,8 +233,9 @@ class QuerySet:
     async def cursor(self) -> AsyncIOMotorCursor:
         if not self._cursor:
             params = {}
+            hints = get_type_hints(self.__class__)
 
-            for param_name, param_type in get_type_hints(self).items():
+            for param_name, param_type in hints.items():
                 if param_name.startswith('_'):
                     param_value = getattr(self, param_name)
 

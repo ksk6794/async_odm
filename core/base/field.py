@@ -24,7 +24,7 @@ class BaseField:
         self._attributes = {}
 
         # Get default values for field attributes
-        options = {arg: getattr(self, arg, None) for arg in get_type_hints(self)}
+        options = {arg: getattr(self, arg, None) for arg in get_type_hints(self.__class__)}
         options.update(kwargs)
 
         # Set filed attributes
@@ -37,7 +37,7 @@ class BaseField:
         return self._attributes.get(name)
 
     def __setattr__(self, key, value):
-        hints = get_type_hints(self)
+        hints = get_type_hints(self.__class__)
 
         if key in hints:
             required_type = hints.get(key)
@@ -135,7 +135,8 @@ class BaseField:
         return value
 
     async def process_value(self, value: Any, action=None) -> Any:
-        default = getattr(self, 'default', None)
+        attr_instance = getattr(self, 'default', None)
+        default = getattr(attr_instance, 'value', None)
         choices = getattr(self, 'choices', None)
 
         # Process the 'default' attribute

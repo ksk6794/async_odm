@@ -11,17 +11,16 @@ class BaseAttr:
         self._default = value
 
     def __set__(self, instance, value):
-        hints = get_type_hints(self)
+        hints = get_type_hints(self.__class__)
         required_type = hints.get('_default')
 
-        if required_type is not Any:
-            if isinstance(value, required_type):
-                instance.set_field_attr(self.name, value)
-            else:
-                raise TypeError(
-                    f'Reserved attr \'{self.name}\' has wrong type! '
-                    f'Expected \'{required_type}\'.'
-                )
+        if required_type is Any or isinstance(value, required_type):
+            instance.set_field_attr(self.name, value)
+        else:
+            raise TypeError(
+                f'Reserved attr \'{self.name}\' has wrong type! '
+                f'Expected \'{required_type}\'.'
+            )
 
     def __get__(self, instance, owner):
         self.field_instance = instance

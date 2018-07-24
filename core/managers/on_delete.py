@@ -57,7 +57,7 @@ class OnDeleteManager:
 
         elif isinstance(field_instance, ForeignKeyBackward):
             field_name = field_instance.field_name
-            default = field_instance.relation.get_declared_fields().get(field_name).default
+            default = field_instance.relation.get_declared_fields().get(field_name).default.value
 
             if callable(default):
                 default = default()

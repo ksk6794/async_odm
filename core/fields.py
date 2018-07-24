@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Sequence, Optional
 
-from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr
+from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr, DefaultAttr
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 
@@ -23,7 +23,7 @@ class BoolField(BaseField):
         field_type = bool
 
     null = NullAttr(value=True)
-    default: Any
+    default = DefaultAttr()
     choices: Optional[Sequence]
 
 
@@ -37,7 +37,7 @@ class StringField(BaseField):
     max_length = MaxLengthAttr()
     unique = UniqueAttr(value=False)
     index: Any
-    default: Any
+    default = DefaultAttr()
     choices: Optional[Sequence]
 
 
@@ -47,7 +47,7 @@ class IntegerField(BaseField):
 
     null = NullAttr(value=True)
     unique = UniqueAttr(value=False)
-    default: Any
+    default = DefaultAttr()
     choices: Optional[Sequence]
 
 
@@ -57,7 +57,7 @@ class FloatField(BaseField):
 
     null = NullAttr(value=True)
     unique = UniqueAttr(value=False)
-    default: Any
+    default = DefaultAttr()
     choices: Optional[Sequence]
 
 
@@ -69,7 +69,7 @@ class ListField(BaseField):
     null = NullAttr(value=True)
     length: Optional[int]
     unique = UniqueAttr(value=False)
-    default: Any
+    default = DefaultAttr()
 
     # For IDE tips
     def __iter__(self):
@@ -95,7 +95,7 @@ class DictField(BaseField):
     unique = UniqueAttr(value=False)
     min_length = MinLengthAttr()
     max_length = MaxLengthAttr()
-    default: Any
+    default = DefaultAttr()
 
     # For IDE tips
     def __iter__(self):
@@ -145,7 +145,7 @@ class ForeignKey(BaseRelationField):
 
     relation: Any
     related_name: Optional[str]
-    default: Any
+    default = DefaultAttr()
     null = NullAttr(value=True)
     on_delete: Optional[int]
 
@@ -163,7 +163,7 @@ class OneToOne(BaseRelationField):
 
     relation: Any
     related_name: Optional[str]
-    default: Any
+    default = DefaultAttr()
     null = NullAttr(value=True)
     on_delete: Optional[int]
     unique = UniqueAttr(value=True)
