@@ -1,4 +1,4 @@
-from typing import get_type_hints
+from typing import get_type_hints, Any
 
 from core.exceptions import ValidationError
 
@@ -13,13 +13,14 @@ class BaseAttr:
         hints = get_type_hints(self)
         required_type = hints.get('value')
 
-        if isinstance(value, required_type):
-            instance.set_field_attr(self.name, value)
-        else:
-            raise TypeError(
-                f'Reserved attr \'{self.name}\' has wrong type! '
-                f'Expected \'{required_type}\'.'
-            )
+        if required_type is not Any:
+            if isinstance(value, required_type):
+                instance.set_field_attr(self.name, value)
+            else:
+                raise TypeError(
+                    f'Reserved attr \'{self.name}\' has wrong type! '
+                    f'Expected \'{required_type}\'.'
+                )
 
     def __get__(self, instance, owner):
         self.field_instance = instance
@@ -94,3 +95,19 @@ class MaxLengthAttr(BaseAttr):
                     f'Field `{field_name}` exceeds the max length {self.attr_value}',
                     self.field_instance.is_subfield
                 )
+
+
+class UniqueAttr(BaseAttr):
+    value: bool
+    name = 'unique'
+
+    def validate(self, field_value):
+        pass
+
+
+class DefaultAttr(BaseAttr):
+    value: Any
+    name = 'default'
+
+    def validate(self, field_value):
+        pass

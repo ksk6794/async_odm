@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Sequence, Optional
 
-from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr
+from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 
@@ -35,7 +35,7 @@ class StringField(BaseField):
     blank = BlankAttr(value=True)
     min_length = MinLengthAttr(value=None)
     max_length = MaxLengthAttr(value=None)
-    unique: bool = False
+    unique = UniqueAttr(value=False)
     index: Any
     default: Any
     choices: Optional[Sequence]
@@ -46,7 +46,7 @@ class IntegerField(BaseField):
         field_type = int
 
     null = NullAttr(value=True)
-    unique: bool = False
+    unique = UniqueAttr(value=False)
     default: Any
     choices: Optional[Sequence]
 
@@ -56,7 +56,7 @@ class FloatField(BaseField):
         field_type = float
 
     null = NullAttr(value=True)
-    unique: bool = False
+    unique = UniqueAttr(value=False)
     default: Any
     choices: Optional[Sequence]
 
@@ -68,7 +68,7 @@ class ListField(BaseField):
     child: Any
     null = NullAttr(value=True)
     length: Optional[int]
-    unique: bool = False
+    unique = UniqueAttr(value=False)
     default: Any
 
     # For IDE tips
@@ -92,7 +92,7 @@ class DictField(BaseField):
         field_type = dict
 
     null = NullAttr(value=True)
-    unique: bool = False
+    unique = UniqueAttr(value=False)
     min_length = MinLengthAttr(value=None)
     max_length = MaxLengthAttr(value=None)
     default: Any
@@ -166,7 +166,7 @@ class OneToOne(BaseRelationField):
     default: Any
     null = NullAttr(value=True)
     on_delete: Optional[int]
-    unique: bool = True
+    unique = UniqueAttr(value=True)
 
     def get_query(self):
         return self.relation.objects.get(**{

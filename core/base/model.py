@@ -26,7 +26,7 @@ class BaseModel(type):
         super().__init__(name, bases, attrs)
 
     def __new__(mcs, name, bases, attrs):
-        if bases:
+        if not mcs.is_abstract(attrs):
             attrs['_dispatcher'] = mcs.get_dispatcher(name, attrs)
 
         return super().__new__(mcs, name, bases, attrs)
