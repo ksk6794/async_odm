@@ -102,75 +102,53 @@ class BaseField:
     def field_value(self, value) -> NoReturn:
         self._value = value
 
-    def get_choice_key(self, value: Any) -> Any:
+    def get_choice_value(self, value: Any) -> Any:
         choices = self.choices.value if hasattr(self, 'choices') else None
 
         if choices:
             choices = {key: value for key, value in choices}
 
-            if value in choices.keys():
+            if value in choices:
                 value = choices.get(value)
 
-            elif value not in choices.values():
+            else:
                 raise ValueError(
                     f'The value \'{value}\' is not specified in the \'choices\' attribute.'
                 )
 
         return value
 
-    def get_choice_value(self, key: AnyStr) -> Any:
-        choices = self.choices.value if hasattr(self, 'choices') else None
-        value = key
-
-        if choices:
-            choices = {value: key for key, value in choices}
-
-            if key not in choices.keys():
-                raise ValueError(
-                    f'The value \'{key}\' is not specified in the \'choices\' attribute.'
-                )
-
-            value = choices.get(key)
-
-        return value
-
     async def process_value(self, value: Any, action=None) -> Any:
         default = self.default.value if hasattr(self, 'default') else None
-        choices = self.choices.value if hasattr(self, 'choices') else None
 
         # Process the 'default' attribute
         if value is None:
             value = await default() if iscoroutinefunction(default) else default() if callable(default) else default
 
-        # Process the 'choices' attribute
-        if value and choices:
-            value = self.get_choice_key(value)
-
         return value
 
-    def _check_value_type(self, field_name, field_value):
+    def validate(self, field_value):
+        self._validate_type(field_value)
+        self._validate_attributes(field_value)
+
+    def _validate_type(self, field_value):
         field_type = self.Meta.field_type
 
-        if field_name and field_value is not None:
+        if field_value is not None:
             if field_type and not isinstance(field_value, field_type):
                 raise ValidationError(
-                    f'Field \'{field_name}\' has wrong type! '
+                    f'Field \'{self.field_name}\' has wrong type! '
                     f'Expected {field_type}`',
                     self.is_subfield
                 )
 
-    def validate(self, field_name, field_value):
-        self._check_value_type(field_name, field_value)
-
+    def _validate_attributes(self, field_value):
         # Get all field attributes
         attributes = [k for k, v in self.__class__.__dict__.items() if isinstance(v, BaseAttr)]
 
         # Validate each field attribute
         for attr in attributes:
-            attr = getattr(self, attr)
-            attr.validate(field_value)
-
-        return field_value
+            getattr(self, attr).validate(field_value)
 
     def to_internal_value(self, value: Any) -> Any:
         """
@@ -222,8 +200,8 @@ class BaseRelationField(BaseField):
     def get_query(self):
         raise NotImplementedError
 
-    async def validate(self, field_name, field_value):
-        super().validate(field_name, field_value)
+    async def validate(self, field_value):
+        super().validate(field_value)
 
         document_id = getattr(field_value, '_id', field_value)
 
@@ -232,7 +210,7 @@ class BaseRelationField(BaseField):
             if not await self.relation.objects.filter(_id=document_id).count():
                 raise ValueError(
                     f'Relation document with ObjectId(\'{str(document_id)}\') does not exist.\n'
-                    f'Model: \'{self.__class__.__name__}\', Field: \'{self.name}\''
+                    f'Model: \'{self.__class__.__name__}\', Field: \'{self.field_name}\''
                 )
 
     def to_internal_value(self, value: Any):

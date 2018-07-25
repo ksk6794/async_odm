@@ -8,8 +8,8 @@ from core.model import MongoModel
 
 class Settings(MongoModel):
     CHOICES = (
-        ('test_1', 1),
-        ('test_2', 2)
+        (1, 'test_1'),
+        (2, 'test_2')
     )
     param_1 = StringField(max_length=3)
     param_2 = StringField(unique=True)
@@ -27,7 +27,7 @@ class FieldsAttrsTests(BaseAsyncTestCase):
         pass
 
     async def test_choices(self):
-        settings = await Settings.objects.create(param_5='test_1')
+        settings = await Settings.objects.create(param_5=1)
         self.assertEqual(settings.param_5, 1)
 
         display = settings.get_param_5_display()
@@ -35,27 +35,24 @@ class FieldsAttrsTests(BaseAsyncTestCase):
 
         await settings.delete()
 
-    async def test_choices_2(self):
+    async def test_choice_wrong_foo_display(self):
         settings = await Settings.objects.create(param_5=2)
-        self.assertEqual(settings.param_5, 2)
-
-        display = settings.get_param_5_display()
-        self.assertEqual(display, 'test_2')
-
         exception = False
+
         try:
-            settings.get_param_10_display()
+            settings.get_param_1_display()
         except AttributeError:
             exception = True
 
         self.assertTrue(exception)
+
         await settings.delete()
 
-    async def test_choices_3(self):
+    async def test_choices_wrong_key(self):
         exception = False
         try:
             await Settings.objects.create(param_5='wrong')
-        except ValueError:
+        except ValidationError:
             exception = True
 
         self.assertTrue(exception)

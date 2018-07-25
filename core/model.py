@@ -219,7 +219,7 @@ class MongoModel(metaclass=BaseModel):
         # Validate field value by default validators
         v = field_instance.validate
         is_coro = asyncio.iscoroutinefunction(v)
-        await v(field_name, field_value) if is_coro else v(field_name, field_value)
+        await v(field_value) if is_coro else v(field_value)
 
         # Call Model child (custom) validate methods
         new_value = await cls._child_validator(field_name, field_value)

@@ -76,16 +76,14 @@ class ListField(BaseField):
     def __iter__(self):
         return self
 
-    def validate(self, name, value):
-        value = super().validate(name, value)
+    def validate(self, field_value):
+        super().validate(field_value)
 
         # TODO: use multiprocessing pool of workers
-        if value and self.child is not None:
-            for list_item in value:
+        if field_value and self.child is not None:
+            for list_item in field_value:
                 self.child.is_subfield = True
-                self.child.validate(name, list_item)
-
-        return value
+                self.child.validate(list_item)
 
 
 class DictField(BaseField):
