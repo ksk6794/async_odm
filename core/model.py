@@ -176,11 +176,13 @@ class MongoModel(metaclass=BaseModel):
             if action is UPDATE and field_name not in modified:
                 continue
 
-            # Process the datetime fields
-            value = await field_instance.process_value(field_values.get(field_name), action)
+            field_value = field_values.get(field_name)
 
             # Validate fields
-            field_value = await cls._validate(field_name, value)
+            field_value = await cls._validate(field_name, field_value)
+
+            # Prepare the fields values
+            field_value = await field_instance.prepare(field_value, action)
 
             internal_values[field_name] = field_instance.to_internal_value(field_value)
 
@@ -210,7 +212,9 @@ class MongoModel(metaclass=BaseModel):
         internal_values = await self.get_internal_values(UPDATE)
         document_id = internal_values.pop('_id')
         document = await self.objects.internal_query.update_one(document_id, **internal_values)
-        return self.get_external_values(document)
+        external_values = self.get_external_values(document)
+
+        return external_values
 
     @classmethod
     async def _validate(cls, field_name: AnyStr, field_value: Any) -> Any:

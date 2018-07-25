@@ -109,7 +109,7 @@ class DateTimeField(BaseField):
     auto_now_create: bool = False
     auto_now_update: bool = False
 
-    async def process_value(self, value, action: int=None):
+    async def prepare(self, value, action: int=None):
         if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
             # MonogoDB rounds microseconds,
             # and ODM does not request the created document,

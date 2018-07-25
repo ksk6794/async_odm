@@ -118,14 +118,16 @@ class BaseField:
 
         return value
 
-    async def process_value(self, value: Any, action=None) -> Any:
-        default = self.default.value if hasattr(self, 'default') else None
+    async def prepare(self, field_value: Any, action=None) -> Any:
+        # Get all field attributes
+        attributes = [k for k, v in self.__class__.__dict__.items()
+                      if isinstance(v, BaseAttr) and hasattr(v, 'prepare')]
 
-        # Process the 'default' attribute
-        if value is None:
-            value = await default() if iscoroutinefunction(default) else default() if callable(default) else default
+        # Validate each field attribute
+        for attr in attributes:
+            field_value = await getattr(self, attr).prepare(field_value)
 
-        return value
+        return field_value
 
     def validate(self, field_value):
         self._validate_type(field_value)

@@ -1,3 +1,4 @@
+from asyncio import iscoroutinefunction
 from typing import get_type_hints, Any, Sequence
 
 from core.exceptions import ValidationError
@@ -120,10 +121,32 @@ class DefaultAttr(BaseAttr):
     def validate(self, field_value):
         pass
 
+    async def prepare(self, field_value):
+        default = self.value
+
+        # Process the 'default' attribute
+        if default and field_value is None:
+            if iscoroutinefunction(default):
+                field_value = await default()
+            elif callable(default):
+                field_value = default()
+            else:
+                field_value = default
+
+        return field_value
+
 
 class ChoiceAttr(BaseAttr):
     _default: Sequence
     _name = 'choice'
 
     def validate(self, field_value):
-        pass
+        choices = {k: v for k, v in self.value} if self.value else {}
+
+        if choices and field_value and field_value not in choices:
+            field_name = self.field_instance.field_name
+
+            raise ValidationError(
+                f'Field `{field_name}` expects the one of {choices}',
+                self.field_instance.is_subfield
+            )

@@ -48,8 +48,19 @@ class FieldsAttrsTests(BaseAsyncTestCase):
 
         await settings.delete()
 
-    async def test_choices_wrong_key(self):
+    async def test_choices_nonexistent_key(self):
         exception = False
+
+        try:
+            await Settings.objects.create(param_5=3)
+        except ValidationError:
+            exception = True
+
+        self.assertTrue(exception)
+
+    async def test_choices_wrong_choice_type(self):
+        exception = False
+
         try:
             await Settings.objects.create(param_5='wrong')
         except ValidationError:
