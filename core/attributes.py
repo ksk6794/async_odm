@@ -1,4 +1,4 @@
-from typing import get_type_hints, Any
+from typing import get_type_hints, Any, Sequence
 
 from core.exceptions import ValidationError
 
@@ -116,6 +116,14 @@ class IndexAttr(BaseAttr):
 class DefaultAttr(BaseAttr):
     _default: Any
     name = 'default'
+
+    def validate(self, field_value):
+        pass
+
+
+class ChoiceAttr(BaseAttr):
+    _default: Sequence
+    _name = 'choice'
 
     def validate(self, field_value):
         pass

@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Any, Sequence, Optional
 
-from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr, DefaultAttr, IndexAttr
+from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr, DefaultAttr, IndexAttr, \
+    ChoiceAttr
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 
@@ -24,7 +25,7 @@ class BoolField(BaseField):
 
     null = NullAttr(value=True)
     default = DefaultAttr()
-    choices: Optional[Sequence]
+    choices = ChoiceAttr()
 
 
 class StringField(BaseField):
@@ -38,7 +39,7 @@ class StringField(BaseField):
     unique = UniqueAttr(value=False)
     index = IndexAttr(value=False)
     default = DefaultAttr()
-    choices: Optional[Sequence]
+    choices = ChoiceAttr()
 
 
 class IntegerField(BaseField):
@@ -48,7 +49,7 @@ class IntegerField(BaseField):
     null = NullAttr(value=True)
     unique = UniqueAttr(value=False)
     default = DefaultAttr()
-    choices: Optional[Sequence]
+    choices = ChoiceAttr()
 
 
 class FloatField(BaseField):
@@ -58,7 +59,7 @@ class FloatField(BaseField):
     null = NullAttr(value=True)
     unique = UniqueAttr(value=False)
     default = DefaultAttr()
-    choices: Optional[Sequence]
+    choices = ChoiceAttr()
 
 
 class ListField(BaseField):

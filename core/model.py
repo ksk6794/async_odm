@@ -65,7 +65,7 @@ class MongoModel(metaclass=BaseModel):
             )
 
         field_instance = declared_fields.get(field_name)
-        choices = getattr(field_instance, 'choices', None)
+        choices = field_instance.choices.value if hasattr(field_instance, 'choices') else None
 
         if not choices:
             raise AttributeError(

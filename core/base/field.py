@@ -103,7 +103,7 @@ class BaseField:
         self._value = value
 
     def get_choice_key(self, value: Any) -> Any:
-        choices = getattr(self, 'choices', None)
+        choices = self.choices.value if hasattr(self, 'choices') else None
 
         if choices:
             choices = {key: value for key, value in choices}
@@ -119,7 +119,7 @@ class BaseField:
         return value
 
     def get_choice_value(self, key: AnyStr) -> Any:
-        choices = getattr(self, 'choices', None)
+        choices = self.choices.value if hasattr(self, 'choices') else None
         value = key
 
         if choices:
@@ -135,9 +135,8 @@ class BaseField:
         return value
 
     async def process_value(self, value: Any, action=None) -> Any:
-        attr_instance = getattr(self, 'default', None)
-        default = getattr(attr_instance, 'value', None)
-        choices = getattr(self, 'choices', None)
+        default = self.default.value if hasattr(self, 'default') else None
+        choices = self.choices.value if hasattr(self, 'choices') else None
 
         # Process the 'default' attribute
         if value is None:
