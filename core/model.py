@@ -170,6 +170,8 @@ class MongoModel(metaclass=BaseModel):
         declared_fields = cls.get_declared_fields()
         declared = set(declared_fields)
         to_update = set(field_values)
+
+        # TODO: incorrectly defined when updating an existing document
         modified = declared & to_update
 
         for field_name, field_instance in declared_fields.items():
