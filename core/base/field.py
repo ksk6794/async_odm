@@ -125,7 +125,7 @@ class BaseField:
 
         # Validate each field attribute
         for attr in attributes:
-            field_value = await getattr(self, attr).prepare(field_value)
+            field_value = await getattr(self, attr).prepare(field_value, action)
 
         return field_value
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Sequence, Optional
 
 from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr, DefaultAttr, IndexAttr, \
-    ChoiceAttr
+    ChoiceAttr, AutoNowUpdateAttr, AutoNowCreateAttr
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
 from .constants import CREATE, UPDATE
 
@@ -106,17 +106,8 @@ class DateTimeField(BaseField):
         field_type = datetime
 
     null = NullAttr(value=True)
-    auto_now_create: bool = False
-    auto_now_update: bool = False
-
-    async def prepare(self, value, action: int=None):
-        if (action is CREATE and self.auto_now_create) or (action is UPDATE and self.auto_now_update) and not value:
-            # MonogoDB rounds microseconds,
-            # and ODM does not request the created document,
-            # for data consistency I reset them
-            value = datetime.now().replace(microsecond=0)
-
-        return value
+    auto_now_create = AutoNowCreateAttr(value=False)
+    auto_now_update = AutoNowUpdateAttr(value=False)
 
 
 class ForeignKeyBackward(BaseBackwardRelationField):

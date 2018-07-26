@@ -1,6 +1,8 @@
 from asyncio import iscoroutinefunction
+from datetime import datetime
 from typing import get_type_hints, Any, Sequence
 
+from core.constants import CREATE, UPDATE
 from core.exceptions import ValidationError
 
 
@@ -121,10 +123,9 @@ class DefaultAttr(BaseAttr):
     def validate(self, field_value):
         pass
 
-    async def prepare(self, field_value):
+    async def prepare(self, field_value, action):
         default = self.value
 
-        # Process the 'default' attribute
         if default and field_value is None:
             if iscoroutinefunction(default):
                 field_value = await default()
@@ -150,3 +151,37 @@ class ChoiceAttr(BaseAttr):
                 f'Field `{field_name}` expects the one of {choices}',
                 self.field_instance.is_subfield
             )
+
+
+class AutoNowCreateAttr(BaseAttr):
+    _default: bool
+    _name = 'auto_now_create'
+
+    def validate(self, field_value):
+        pass
+
+    async def prepare(self, field_value, action):
+        if self.value and not field_value and action is CREATE:
+            # MonogoDB rounds microseconds,
+            # and ODM does not request the created document,
+            # for data consistency I reset them
+            field_value = datetime.now().replace(microsecond=0)
+
+        return field_value
+
+
+class AutoNowUpdateAttr(BaseAttr):
+    _default: bool
+    _name = 'auto_now_update'
+
+    def validate(self, field_value):
+        pass
+
+    async def prepare(self, field_value, action):
+        if self.value and not field_value and action is UPDATE:
+            # MonogoDB rounds microseconds,
+            # and ODM does not request the created document,
+            # for data consistency I reset them
+            field_value = datetime.now().replace(microsecond=0)
+
+        return field_value

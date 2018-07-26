@@ -130,6 +130,7 @@ class MongoModel(metaclass=BaseModel):
     async def save(self):
         document = await self._update() if self.id else await self._create()
         self.__document.update(document)
+        self.__modified_fields = []
 
     async def delete(self):
         if self.has_backwards:
