@@ -36,7 +36,11 @@ class MongoModel(metaclass=BaseModel):
             declared_fields = self.get_declared_fields()
 
             if key not in declared_fields:
+                # Set the undeclared fields
                 self.__document[key] = value
+
+                if key != '_id':
+                    self.__modified_fields.append(key)
             else:
                 super().__setattr__(key, value)
         else:
@@ -161,22 +165,23 @@ class MongoModel(metaclass=BaseModel):
         """
         Convert external values to internal for saving to a database.
         """
-        document = self.get_document()
-        return await self.to_internal(document, action)
+        field_values = self.get_document()
+
+        if action is UPDATE:
+            field_values = {f: field_values.get(f) for f in self.__modified_fields}
+
+        return await self.to_internal(field_values, action)
 
     @classmethod
     async def to_internal(cls, field_values, action):
         internal_values = {}
         declared_fields = cls.get_declared_fields()
         declared = set(declared_fields)
-        to_update = set(field_values)
-
-        # TODO: incorrectly defined when updating an existing document
-        modified = declared & to_update
+        fields = set(field_values.keys())
 
         for field_name, field_instance in declared_fields.items():
             # Bring to internal values only modified fields (only for UPDATE)
-            if action is UPDATE and field_name not in modified:
+            if action is UPDATE and field_name not in fields:
                 continue
 
             field_value = field_values.get(field_name)
@@ -189,7 +194,7 @@ class MongoModel(metaclass=BaseModel):
 
             internal_values[field_name] = field_instance.to_internal_value(field_value)
 
-        undeclared = to_update - declared
+        undeclared = fields - declared
         undeclared_field_values = {k: v for k, v in field_values.items() if k in undeclared}
         internal_values.update(undeclared_field_values)
 
@@ -204,7 +209,9 @@ class MongoModel(metaclass=BaseModel):
         insert_result = await self.objects.internal_query.create_one(**internal_values)
 
         # Generate document from field_values and inserted_id
-        internal_values.update({'_id': insert_result.inserted_id})
+        internal_values.update({
+            '_id': insert_result.inserted_id
+        })
         return self.get_external_values(internal_values)
 
     async def _update(self):
@@ -213,8 +220,7 @@ class MongoModel(metaclass=BaseModel):
         :return: dict
         """
         internal_values = await self.get_internal_values(UPDATE)
-        document_id = internal_values.pop('_id')
-        document = await self.objects.internal_query.update_one(document_id, **internal_values)
+        document = await self.objects.internal_query.update_one(self.id, **internal_values)
         external_values = self.get_external_values(document)
 
         return external_values

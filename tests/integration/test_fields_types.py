@@ -38,7 +38,7 @@ class FieldsTypesTests(BaseAsyncTestCase):
         await test_dt.save()
         update_dt = test_dt.dt
         self.assertTrue(update_dt > create_dt)
-        
+
         await test_dt.delete()
 
     async def test_type_char(self):

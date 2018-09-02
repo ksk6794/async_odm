@@ -178,7 +178,7 @@ class AutoNowUpdateAttr(BaseAttr):
         pass
 
     async def prepare(self, field_value, action):
-        if self.value and not field_value and action is UPDATE:
+        if self.value and action is UPDATE:
             # MonogoDB rounds microseconds,
             # and ODM does not request the created document,
             # for data consistency I reset them

@@ -18,7 +18,7 @@ class MongoDispatcher:
 
     async def count(self, **kwargs) -> int:
         collection = await self.get_collection()
-        return await collection.count(kwargs)
+        return await collection.count_documents(kwargs)
 
     async def get_collection(self) -> Collection:
         if iscoroutine(self.database):
