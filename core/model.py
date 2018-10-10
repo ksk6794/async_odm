@@ -180,23 +180,25 @@ class MongoModel(metaclass=BaseModel):
         fields = set(field_values.keys())
 
         for field_name, field_instance in declared_fields.items():
-            # Bring to internal values only modified fields (only for UPDATE)
-            if action is UPDATE and field_name not in fields:
-                continue
-
+            # Get value from transmitted fields
             field_value = field_values.get(field_name)
 
-            # Validate fields
+            # Check and modify the field value
             field_value = await cls._validate(field_name, field_value)
+            field_value = await field_instance.transform(field_value, action)
 
-            # Prepare the fields values
-            field_value = await field_instance.prepare(field_value, action)
+            # Bring to internal values only modified fields (only for UPDATE)
+            if not field_value and action is UPDATE and field_name not in fields:
+                continue
 
             internal_values[field_name] = field_instance.to_internal_value(field_value)
 
         undeclared = fields - declared
         undeclared_field_values = {k: v for k, v in field_values.items() if k in undeclared}
         internal_values.update(undeclared_field_values)
+
+        # Don't save None-value fields
+        internal_values = {k: v for k, v in internal_values.items() if v is not None}
 
         return internal_values
 

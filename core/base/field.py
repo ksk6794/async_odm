@@ -1,5 +1,4 @@
 import copy
-from asyncio import iscoroutinefunction
 from collections import deque
 from typing import get_type_hints, AnyStr, Any, Awaitable, NoReturn, Optional, Union
 
@@ -118,14 +117,14 @@ class BaseField:
 
         return value
 
-    async def prepare(self, field_value: Any, action=None) -> Any:
+    async def transform(self, field_value: Any, action=None) -> Any:
         # Get all field attributes
         attributes = [k for k, v in self.__class__.__dict__.items()
-                      if isinstance(v, BaseAttr) and hasattr(v, 'prepare')]
+                      if isinstance(v, BaseAttr) and hasattr(v, 'transform')]
 
         # Validate each field attribute
         for attr in attributes:
-            field_value = await getattr(self, attr).prepare(field_value, action)
+            field_value = await getattr(self, attr).transform(field_value, action)
 
         return field_value
 

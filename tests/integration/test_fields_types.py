@@ -1,8 +1,17 @@
 from datetime import datetime, timedelta
+
 from core.model import MongoModel
 from core.exceptions import ValidationError
+from core.fields import (
+    StringField,
+    IntegerField,
+    ListField,
+    DictField,
+    FloatField,
+    DateTimeField,
+    BoolField
+)
 from tests.base import BaseAsyncTestCase
-from core.fields import StringField, IntegerField, ListField, DictField, FloatField, DateTimeField, BoolField
 
 
 class User(MongoModel):

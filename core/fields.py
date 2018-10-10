@@ -1,10 +1,19 @@
 from datetime import datetime
-from typing import Any, Sequence, Optional
+from typing import Any, Optional
 
-from core.attributes import NullAttr, BlankAttr, MinLengthAttr, MaxLengthAttr, UniqueAttr, DefaultAttr, IndexAttr, \
-    ChoiceAttr, AutoNowUpdateAttr, AutoNowCreateAttr
 from .base.field import BaseField, BaseRelationField, BaseBackwardRelationField
-from .constants import CREATE, UPDATE
+from .attributes import (
+    RequiredAttr,
+    BlankAttr,
+    MinLengthAttr,
+    MaxLengthAttr,
+    UniqueAttr,
+    DefaultAttr,
+    IndexAttr,
+    ChoiceAttr,
+    AutoNowUpdateAttr,
+    AutoNowCreateAttr
+)
 
 __all__ = (
     'BoolField',
@@ -23,7 +32,7 @@ class BoolField(BaseField):
     class Meta:
         field_type = bool
 
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     default = DefaultAttr()
     choices = ChoiceAttr()
 
@@ -32,7 +41,7 @@ class StringField(BaseField):
     class Meta:
         field_type = str
 
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     blank = BlankAttr(value=True)
     min_length = MinLengthAttr()
     max_length = MaxLengthAttr()
@@ -46,7 +55,7 @@ class IntegerField(BaseField):
     class Meta:
         field_type = int
 
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     unique = UniqueAttr(value=False)
     default = DefaultAttr()
     choices = ChoiceAttr()
@@ -56,7 +65,7 @@ class FloatField(BaseField):
     class Meta:
         field_type = float
 
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     unique = UniqueAttr(value=False)
     default = DefaultAttr()
     choices = ChoiceAttr()
@@ -67,8 +76,9 @@ class ListField(BaseField):
         field_type = list
 
     child: Any
-    null = NullAttr(value=True)
-    length: Optional[int]
+    required = RequiredAttr(value=False)
+    min_length = MinLengthAttr()
+    max_length = MaxLengthAttr()
     unique = UniqueAttr(value=False)
     default = DefaultAttr()
 
@@ -90,7 +100,7 @@ class DictField(BaseField):
     class Meta:
         field_type = dict
 
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     unique = UniqueAttr(value=False)
     min_length = MinLengthAttr()
     max_length = MaxLengthAttr()
@@ -105,7 +115,7 @@ class DateTimeField(BaseField):
     class Meta:
         field_type = datetime
 
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     auto_now_create = AutoNowCreateAttr(value=False)
     auto_now_update = AutoNowUpdateAttr(value=False)
 
@@ -136,7 +146,7 @@ class ForeignKey(BaseRelationField):
     relation: Any
     related_name: Optional[str]
     default = DefaultAttr()
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     on_delete: Optional[int]
 
     def get_query(self):
@@ -154,7 +164,7 @@ class OneToOne(BaseRelationField):
     relation: Any
     related_name: Optional[str]
     default = DefaultAttr()
-    null = NullAttr(value=True)
+    required = RequiredAttr(value=False)
     on_delete: Optional[int]
     unique = UniqueAttr(value=True)
 

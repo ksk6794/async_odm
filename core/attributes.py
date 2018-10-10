@@ -42,16 +42,16 @@ class BaseAttr:
         raise NotImplementedError()
 
 
-class NullAttr(BaseAttr):
+class RequiredAttr(BaseAttr):
     _default: bool
-    name = 'null'
+    name = 'required'
 
     def validate(self, field_value):
-        field_name = self.field_instance.field_name
+        if self.value is True and field_value is None:
+            field_name = self.field_instance.field_name
 
-        if self.value is False and field_value is None:
             raise ValidationError(
-                f'Field `{field_name}` can not be null',
+                f'Field `{field_name}` is required',
                 self.field_instance.is_subfield
             )
 
@@ -75,10 +75,10 @@ class MinLengthAttr(BaseAttr):
     name = 'min_length'
 
     def validate(self, field_value):
-        field_name = self.field_instance.field_name
-
         if self.value and field_value is not None:
             if hasattr(field_value, '__len__') and len(field_value) < self.value:
+                field_name = self.field_instance.field_name
+
                 raise ValidationError(
                     f'Field `{field_name}` exceeds the min length {self.value}',
                     self.field_instance.is_subfield
@@ -90,10 +90,10 @@ class MaxLengthAttr(BaseAttr):
     name = 'max_length'
 
     def validate(self, field_value):
-        field_name = self.field_instance.field_name
-
         if self.value and field_value is not None:
             if hasattr(field_value, '__len__') and len(field_value) > self.value:
+                field_name = self.field_instance.field_name
+
                 raise ValidationError(
                     f'Field `{field_name}` exceeds the max length {self.value}',
                     self.field_instance.is_subfield
@@ -123,7 +123,7 @@ class DefaultAttr(BaseAttr):
     def validate(self, field_value):
         pass
 
-    async def prepare(self, field_value, action):
+    async def transform(self, field_value, action):
         default = self.value
 
         if default and field_value is None:
@@ -160,7 +160,7 @@ class AutoNowCreateAttr(BaseAttr):
     def validate(self, field_value):
         pass
 
-    async def prepare(self, field_value, action):
+    async def transform(self, field_value, action):
         if self.value and not field_value and action is CREATE:
             # MonogoDB rounds microseconds,
             # and ODM does not request the created document,
@@ -177,7 +177,7 @@ class AutoNowUpdateAttr(BaseAttr):
     def validate(self, field_value):
         pass
 
-    async def prepare(self, field_value, action):
+    async def transform(self, field_value, action):
         if self.value and action is UPDATE:
             # MonogoDB rounds microseconds,
             # and ODM does not request the created document,

@@ -14,7 +14,7 @@ class Post(MongoModel):
         # )
 
     title = StringField()
-    author = ForeignKey(relation='Author', related_name='posts', null=True)
+    author = ForeignKey(relation='Author', related_name='posts', required=False)
     published = DateTimeField()
 
 
